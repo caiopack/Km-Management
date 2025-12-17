@@ -7,7 +7,8 @@ import {
   Row,
   Col,
   Container,
-  InputGroup
+  InputGroup,
+  Badge
 } from 'react-bootstrap';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
@@ -41,17 +42,51 @@ const PRIORIDADE_COLORS = {
   3: '#198754'  
 };
 
-// Duração ajustada para 30 minutos (Blocos fixos)
 const DURACAO_PADRAO_MINUTOS = 30;
+
+// --- COMPONENTE CUSTOMIZADO PARA O EVENTO ---
+// Exibe todos os detalhes dentro do bloco do calendário
+const CustomEvent = ({ event }) => {
+  const { resource } = event;
+  return (
+    <div style={{ fontSize: '0.75rem', lineHeight: '1.2', overflow: 'hidden', height: '100%' }} title={resource.descricao || ''}>
+      <div className="fw-bold text-truncate">{resource.titulo}</div>
+      
+      <div className="text-truncate">
+        <i className="bi bi-person-fill me-1"/>
+        {resource.clienteNome || 'Cliente ñ ident.'}
+      </div>
+
+      {resource.clienteEndereco && (
+        <div className="text-truncate">
+           <i className="bi bi-geo-alt-fill me-1"/>
+           {resource.clienteEndereco}
+        </div>
+      )}
+      
+      <div className="d-flex align-items-center justify-content-between mt-1">
+         <span style={{ fontSize: '0.7em', textTransform: 'uppercase', opacity: 0.9 }}>
+           {resource.status?.replace('_', ' ')}
+         </span>
+         {resource.prioridade === 1 && <Badge bg="danger" style={{fontSize: '0.6em'}}>!</Badge>}
+      </div>
+
+      {resource.descricao && (
+        <div className="text-truncate fst-italic opacity-75 border-top border-white border-opacity-25 mt-1 pt-1">
+          {resource.descricao}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Agenda() {
   const [tarefas, setTarefas] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [clientes, setClientes] = useState([]);
   
-  // View padrão: Semana (Week) para visualizar melhor a grade horária
   const [view, setView] = useState('week'); 
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(new Date()); // Estado que controla a data atual do calendário
 
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState(null);
@@ -65,11 +100,11 @@ export default function Agenda() {
     fetchClientes();
   }, []);
 
+  // Atualiza eventos sempre que tarefas ou clientes mudarem (para pegar o endereço atualizado)
   useEffect(() => {
     const novosEventos = tarefas
       .filter(t => t.dataServico)
       .map(t => {
-        // Formato esperado do backend: "yyyy-MM-dd HH:mm"
         const [dataPart, horaPart] = t.dataServico.split(' ');
         const [ano, mes, dia] = dataPart.split('-').map(Number);
         const [hora, minuto] = horaPart.split(':').map(Number);
@@ -77,17 +112,27 @@ export default function Agenda() {
         const dataInicio = new Date(ano, mes - 1, dia, hora, minuto);
         const dataFim = addMinutes(dataInicio, DURACAO_PADRAO_MINUTOS); 
 
+        // Encontra dados completos do cliente
+        const cliente = clientes.find(c => c.id === t.clienteId || c.id === t.cliente_id);
+        const nomeCliente = cliente ? cliente.nome : (t.clienteNome || '?');
+        const enderecoCliente = cliente ? cliente.endereco : '';
+
         return {
           id: t.id,
-          title: `${t.titulo} (${t.clienteNome || '?'})`,
+          // Título simples para views mensais que não usam o componente customizado
+          title: `${t.titulo} - ${nomeCliente}`, 
           start: dataInicio,
           end: dataFim,
           allDay: false, 
-          resource: t
+          resource: {
+            ...t,
+            clienteNome: nomeCliente,
+            clienteEndereco: enderecoCliente
+          }
         };
       });
     setEventos(novosEventos);
-  }, [tarefas]);
+  }, [tarefas, clientes]);
 
   async function fetchTarefas() {
     try {
@@ -115,9 +160,17 @@ export default function Agenda() {
     openModal(null, start);
   }
 
+  // --- CONTROLE DO MINI CALENDÁRIO ---
+  function handleDateChange(e) {
+    if(e.target.value){
+      // Parse da string 'yyyy-mm-dd' para Date, mantendo o fuso local
+      const [ano, mes, dia] = e.target.value.split('-').map(Number);
+      setDate(new Date(ano, mes - 1, dia));
+    }
+  }
+
   function openModal(tarefa = null, dataPreSelecionada = null) {
     if (tarefa) {
-      // Converte "2023-12-01 15:30" para "2023-12-01T15:30" (input datetime-local)
       const dataFormatadaInput = tarefa.dataServico.replace(' ', 'T');
       setModalData({
         ...tarefa,
@@ -127,7 +180,6 @@ export default function Agenda() {
     } else {
       let dataStr = '';
       if (dataPreSelecionada) {
-        // Ajusta fuso horário para preencher o input corretamente
         const offset = dataPreSelecionada.getTimezoneOffset() * 60000;
         const localDate = new Date(dataPreSelecionada.getTime() - offset);
         dataStr = localDate.toISOString().slice(0, 16);
@@ -159,7 +211,6 @@ export default function Agenda() {
     setValidated(true);
     if (!modalData?.titulo || !modalData?.clienteId || !modalData?.dataServico) return;
     
-    // Ajusta formato para o backend (remove T)
     const payload = {
       ...modalData,
       dataServico: modalData.dataServico.replace('T', ' ')
@@ -199,12 +250,12 @@ export default function Agenda() {
     return {
       style: {
         backgroundColor,
-        borderRadius: '3px',
-        opacity: 0.9,
+        borderRadius: '4px',
+        opacity: 0.95,
         color: 'white',
-        border: '0px',
+        border: '1px solid rgba(255,255,255,0.2)',
         fontSize: '0.8rem',
-        padding: '1px 4px'
+        padding: '2px'
       }
     };
   };
@@ -212,29 +263,44 @@ export default function Agenda() {
   return (
     <Container fluid className="py-3 d-flex flex-column" style={{ minHeight: '100vh', padding: '20px 32px' }}>
       <style>{`
-        /* Tema Escuro customizado */
-        .rbc-calendar { color: #e0e0e0; }
+        .rbc-calendar { color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
         .rbc-toolbar button { color: #fff; border: 1px solid #495057; }
         .rbc-toolbar button:hover { background-color: #343a40; }
         .rbc-toolbar button.rbc-active { background-color: #0d6efd; border-color: #0d6efd; }
         
-        /* Fundo e Bordas */
         .rbc-off-range-bg { background-color: #2c3034 !important; }
         .rbc-today { background-color: #313b4b !important; }
         .rbc-month-view, .rbc-time-view, .rbc-agenda-view, .rbc-header, .rbc-month-row, .rbc-day-bg + .rbc-day-bg {
           border-color: #495057;
         }
         
-        /* Ajuste das linhas da grade de horário */
         .rbc-timeslot-group { border-bottom: 1px solid #495057; }
         .rbc-time-content { border-top: 1px solid #495057; }
         .rbc-day-slot .rbc-time-slot { border-top: 1px solid #3a3f45; }
         .rbc-label { color: #adb5bd; }
+        .rbc-event { min-height: 100% !important; } /* Força o evento a ocupar altura */
       `}</style>
 
-      <Row className="mb-3">
-        <Col className="d-flex justify-content-between align-items-center">
+      <Row className="mb-3 align-items-center">
+        <Col>
           <h2 className="text-white m-0 fw-bold">Agenda de Serviços</h2>
+        </Col>
+        
+        {/* MINI CALENDÁRIO / DATE PICKER */}
+        <Col md="auto" className="d-flex align-items-center gap-2">
+            <Form.Label className="text-white-50 m-0 fw-bold" style={{whiteSpace: 'nowrap'}}>
+              <i className="bi bi-calendar-week me-1"/> Ir para:
+            </Form.Label>
+            <Form.Control 
+              type="date" 
+              className="bg-dark text-white border-secondary"
+              value={format(date, 'yyyy-MM-dd')}
+              onChange={handleDateChange}
+              style={{ width: 'auto' }}
+            />
+        </Col>
+
+        <Col md="auto">
           <Button variant="primary" onClick={() => openModal()}>
             <i className="bi bi-plus-lg me-1" /> Novo Agendamento
           </Button>
@@ -247,15 +313,18 @@ export default function Agenda() {
           events={eventos}
           view={view}
           onView={setView}
-          date={date}
-          onNavigate={setDate}
+          date={date}           // Vínculo com o estado 'date'
+          onNavigate={setDate}  // Atualiza o estado ao navegar
           
-          // --- CONFIGURAÇÃO DE HORÁRIOS FIXOS ---
-          step={30}         // Intervalos de 30 minutos
-          timeslots={2}     // 2 slots de 30min por hora
-          min={new Date(0, 0, 0, 15, 0, 0)}  // Início: 15:00
-          max={new Date(0, 0, 0, 21, 30, 0)} // Fim: 21:30 (Último bloco termina às 21:30 ou começa 21:00 dependendo da visão)
+          step={30}
+          timeslots={1}
+          min={new Date(0, 0, 0, 15, 0, 0)}
+          max={new Date(0, 0, 0, 21, 30, 0)}
           
+          components={{
+            event: CustomEvent // <--- Aqui injetamos o visualizador detalhado
+          }}
+
           startAccessor="start"
           endAccessor="end"
           style={{ height: '100%' }}
@@ -272,7 +341,6 @@ export default function Agenda() {
         />
       </div>
 
-      {/* MODAL */}
       <Modal show={showModal} onHide={closeModal} centered>
         <Modal.Header closeButton className="bg-dark text-white border-secondary">
           <Modal.Title>{modalData?.id ? 'Editar Agendamento' : 'Novo Agendamento'}</Modal.Title>
@@ -298,11 +366,10 @@ export default function Agenda() {
                   <Form.Label>Data e Hora*</Form.Label>
                   <Form.Control
                     type="datetime-local"
+                    step={1800} 
                     value={modalData?.dataServico || ''}
                     onChange={e => setModalData(d => ({ ...d, dataServico: e.target.value }))}
                     required
-                    // Opcional: min/max no input também para evitar erro do usuário
-                    // min={`${modalData?.dataServico?.split('T')[0]}T15:00`}
                   />
                   <Form.Text className="text-muted">Horário: 15:00 às 21:30</Form.Text>
                 </Form.Group>
@@ -388,7 +455,6 @@ export default function Agenda() {
         </Form>
       </Modal>
 
-      {/* Modal Confirmar Exclusão */}
       <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered>
         <Modal.Header closeButton className="bg-dark text-white border-0">
           <Modal.Title>Confirmar Exclusão</Modal.Title>
