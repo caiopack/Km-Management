@@ -1,0 +1,77 @@
+:root {
+  --bs-bg-main:    #1A1A1A;
+  --bs-bg-sidebar: #2A2A2A;
+  --bs-primary:    #0066FF;
+}
+.bg-main    { background-color: var(--bs-bg-main) !important; }
+.bg-sidebar { background-color: var(--bs-bg-sidebar) !important; }
+.bg-primary { background-color: var(--bs-primary)  !important; }
+
+/* força main ocupar toda a tela sem scroll horizontal */
+main {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* estrutura header + tabela */
+.clients-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.clients-header {
+  flex: 0 0 auto;
+  padding: 1rem;
+}
+.clients-table {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+/* fixa largura do offcanvas em telas menores que 992px */
+@media (max-width: 991.98px) {
+  .offcanvas.offcanvas-start {
+    width: 70% !important;
+  }
+}
+
+/* torna as células truncadas com "..." se excederem */
+.clients-table table th,
+.clients-table table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* garante ação do scroll só na tabela */
+.table-responsive {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+/* navlink ativo */
+.nav-link.active {
+  background-color: var(--bs-primary) !important;
+}
+
+/* Scrollbar SUAVE nas colunas do kanban */
+.agenda-kanban .d-flex > div {
+  scrollbar-width: thin;
+  scrollbar-color: #363c48 #23292f;
+}
+
+/* Chrome, Edge, Safari */
+.agenda-kanban .d-flex > div::-webkit-scrollbar {
+  width: 7px;
+  background: #23292f;
+  border-radius: 8px;
+}
+.agenda-kanban .d-flex > div::-webkit-scrollbar-thumb {
+  background: #363c48;
+  border-radius: 8px;
+}
+
+::placeholder {
+  color: #6c757d !important;
+  opacity: 1;
+}
