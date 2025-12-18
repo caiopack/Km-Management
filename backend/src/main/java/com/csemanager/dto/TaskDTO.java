@@ -10,11 +10,15 @@ public class TaskDTO {
     private String clienteNome;
     private String clienteEndereco;
     private String dataServico;
+    private String criadoPor;
+    // --- NOVO CAMPO ---
+    private Double valorPago;
 
     public TaskDTO() {}
 
     public TaskDTO(Long id, String titulo, String descricao, String status, Integer prioridade,
-                   Long clienteId, String clienteNome, String clienteEndereco, String dataServico) {
+                   Long clienteId, String clienteNome, String clienteEndereco, String dataServico, 
+                   String criadoPor, Double valorPago) {
         this.id = id;
         this.titulo = titulo;
         this.descricao = descricao;
@@ -24,8 +28,11 @@ public class TaskDTO {
         this.clienteNome = clienteNome;
         this.clienteEndereco = clienteEndereco;
         this.dataServico = dataServico;
+        this.criadoPor = criadoPor;
+        this.valorPago = valorPago;
     }
 
+    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -52,4 +59,10 @@ public class TaskDTO {
 
     public String getDataServico() { return dataServico; }
     public void setDataServico(String dataServico) { this.dataServico = dataServico; }
+
+    public String getCriadoPor() { return criadoPor; }
+    public void setCriadoPor(String criadoPor) { this.criadoPor = criadoPor; }
+
+    public Double getValorPago() { return valorPago; }
+    public void setValorPago(Double valorPago) { this.valorPago = valorPago; }
 }

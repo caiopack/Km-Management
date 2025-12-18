@@ -21,7 +21,6 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../index.css';
 
-// --- CONFIGURAÇÃO DATE-FNS ---
 const locales = { 'pt-BR': ptBR };
 const localizer = dateFnsLocalizer({
   format,
@@ -45,24 +44,31 @@ const PRIORIDADE_COLORS = {
 
 const DURACAO_PADRAO_MINUTOS = 30;
 
-// --- COMPONENTE DO EVENTO (CARD) ---
+// --- CARD DO EVENTO ---
 const CustomEvent = ({ event }) => {
   const { resource } = event;
   const start = event.start;
 
-  // Tratamento de segurança para strings
   const nome = resource.clienteNome ? resource.clienteNome.split(' ')[0] : 'Cliente';
+  
+  // Descrição curta
   const desc = resource.descricao || 'S/ Obs';
-  // Corta descrição para não quebrar o layout (máx 25 chars)
   const descCurta = desc.length > 25 ? desc.substring(0, 25) + '...' : desc;
-  const tel = resource.clienteTelefone || '';
+  
+  const tel = resource.clienteTelefone || 'S/ Tel';
+  const responsavel = resource.criadoPor || 'Admin';
+
+  // Formata valor se existir
+  const valorFormatado = resource.valorPago 
+    ? parseFloat(resource.valorPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    : null;
 
   return (
-    <div className="d-flex flex-column h-100 p-1" style={{ fontSize: '0.75rem', lineHeight: '1.2' }}>
+    <div className="d-flex flex-column h-100 p-1" style={{ fontSize: '0.75rem', lineHeight: '1.2', overflow: 'hidden' }}>
       
-      {/* CABEÇALHO: Nome e Hora (Alinhados topo) */}
+      {/* 1. Nome e Hora */}
       <div className="d-flex justify-content-between align-items-center mb-1">
-        <span className="fw-bold text-truncate" title={resource.clienteNome}>
+        <span className="fw-bold text-truncate" title={resource.clienteNome} style={{ maxWidth: '65%' }}>
            <i className="bi bi-person-fill me-1"></i>{nome}
         </span>
         <span className="bg-black bg-opacity-25 px-1 rounded small fw-bold" style={{ fontSize: '0.7rem' }}>
@@ -70,22 +76,34 @@ const CustomEvent = ({ event }) => {
         </span>
       </div>
 
-      {/* CORPO: Descrição (Texto cinza claro) */}
-      <div className="text-white-50 text-wrap mb-1" style={{ fontSize: '0.7rem', lineHeight: '1.0' }}>
-        {descCurta}
-      </div>
-
-      {/* RODAPÉ: Telefone e Duração (Empurrado para baixo com mt-auto) */}
-      <div className="mt-auto d-flex justify-content-between align-items-center border-top border-white-50 pt-1">
-         <div className="text-white-50" style={{ fontSize: '0.7rem' }}>
-            <i className="bi bi-whatsapp me-1"></i>
-            {tel.slice(-4) || '--'}
+      {/* 2. Descrição e Valor */}
+      <div className="mb-auto">
+         <div className="text-white-50 text-wrap" style={{ fontSize: '0.7rem', lineHeight: '1.1' }}>
+           {descCurta}
          </div>
-         <span className="badge bg-light text-dark border px-1" style={{ fontSize: '0.65rem' }}>
-            {resource.duracao}m
-         </span>
+         {valorFormatado && (
+           <div className="text-success fw-bold mt-1" style={{ fontSize: '0.7rem' }}>
+             {valorFormatado}
+           </div>
+         )}
       </div>
 
+      {/* 3. Rodapé */}
+      <div className="border-top border-white-50 pt-1 mt-1">
+          <div className="d-flex align-items-center text-white-50 mb-1" style={{ fontSize: '0.7rem' }}>
+            <i className="bi bi-whatsapp me-1 text-success"></i>
+            <span className="text-truncate">{tel}</span>
+          </div>
+
+          <div className="d-flex justify-content-between align-items-center">
+             <div className="text-white-50 fst-italic text-truncate" style={{ fontSize: '0.65rem', maxWidth: '70%' }}>
+               <i className="bi bi-calendar-check me-1"></i>{responsavel}
+             </div>
+             <span className="badge bg-light text-dark border px-1" style={{ fontSize: '0.65rem' }}>
+                {resource.duracao}m
+             </span>
+          </div>
+      </div>
     </div>
   );
 };
@@ -114,16 +132,11 @@ export default function Agenda() {
     const novosEventos = tarefas
       .filter(t => t.dataServico)
       .map(t => {
-        const [dataPart, horaPart] = t.dataServico.split(' ');
-        const [ano, mes, dia] = dataPart.split('-').map(Number);
-        const [hora, minuto] = horaPart.split(':').map(Number);
-        
-        const dataInicio = new Date(ano, mes - 1, dia, hora, minuto);
+        const dataInicio = new Date(t.dataServico);
         const dataFim = addMinutes(dataInicio, DURACAO_PADRAO_MINUTOS); 
-        
         const duracaoMin = differenceInMinutes(dataFim, dataInicio);
 
-        const cliente = clientes.find(c => c.id === t.clienteId || c.id === t.cliente_id);
+        const cliente = clientes.find(c => c.id === t.clienteId);
         const nomeCliente = cliente ? cliente.nome : (t.clienteNome || '?');
         const enderecoCliente = cliente ? cliente.endereco : '';
         const telefoneCliente = cliente ? (cliente.telefone || cliente.celular) : '';
@@ -140,7 +153,8 @@ export default function Agenda() {
             clienteEndereco: enderecoCliente,
             clienteTelefone: telefoneCliente,
             duracao: duracaoMin,
-            criadoPor: t.criadoPor || 'Admin' 
+            criadoPor: t.criadoPor || 'Admin',
+            valorPago: t.valorPago // Novo campo
           }
         };
       });
@@ -148,17 +162,10 @@ export default function Agenda() {
   }, [tarefas, clientes]);
 
   async function fetchTarefas() {
-    try {
-      const resp = await api.get('/tarefas');
-      setTarefas(resp.data);
-    } catch (error) { console.error(error); }
+    try { const r = await api.get('/tarefas'); setTarefas(r.data); } catch (e) { console.error(e); }
   }
-
   async function fetchClientes() {
-    try {
-      const resp = await api.get('/clientes');
-      setClientes(resp.data);
-    } catch (error) { console.error(error); }
+    try { const r = await api.get('/clientes'); setClientes(r.data); } catch (e) { console.error(e); }
   }
 
   function handleSelectEvent(event) { openModal(event.resource); }
@@ -171,11 +178,22 @@ export default function Agenda() {
   }
 
   function openModal(tarefa = null, dataPreSelecionada = null) {
+    let usuarioPadrao = 'Admin';
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+        try {
+            const userObj = JSON.parse(userStr);
+            if (userObj.nome) usuarioPadrao = userObj.nome;
+        } catch(e) {}
+    }
+
     if (tarefa) {
       setModalData({
         ...tarefa,
-        clienteId: tarefa.clienteId || tarefa.cliente_id,
-        dataServico: tarefa.dataServico.replace(' ', 'T')
+        clienteId: tarefa.clienteId, 
+        dataServico: tarefa.dataServico ? tarefa.dataServico.substring(0, 16) : '',
+        criadoPor: tarefa.criadoPor || usuarioPadrao,
+        valorPago: tarefa.valorPago || '' 
       });
     } else {
       let dataStr = '';
@@ -184,7 +202,8 @@ export default function Agenda() {
         dataStr = new Date(dataPreSelecionada.getTime() - offset).toISOString().slice(0, 16);
       }
       setModalData({
-        titulo: '', descricao: '', status: 'EM_ABERTO', prioridade: 2, clienteId: '', dataServico: dataStr
+        titulo: '', descricao: '', status: 'EM_ABERTO', prioridade: 2, clienteId: '', dataServico: dataStr,
+        criadoPor: usuarioPadrao, valorPago: ''
       });
     }
     setClienteFiltro(''); setValidated(false); setShowModal(true);
@@ -199,7 +218,11 @@ export default function Agenda() {
     setValidated(true);
     if (!modalData?.titulo || !modalData?.clienteId || !modalData?.dataServico) return;
     
-    const payload = { ...modalData, dataServico: modalData.dataServico.replace('T', ' ') };
+    // Converte valorPago para número se tiver valor
+    const payload = { 
+        ...modalData,
+        valorPago: modalData.valorPago ? parseFloat(modalData.valorPago) : null
+    };
 
     try {
       if (modalData.id) await api.put(`/tarefas/${modalData.id}`, payload);
@@ -242,29 +265,17 @@ export default function Agenda() {
   return (
     <Container fluid className="py-3 d-flex flex-column" style={{ minHeight: '100vh', padding: '20px 32px' }}>
       
-      {/* --- ESTILOS CSS CRÍTICOS --- */}
       <style>{`
-        /* Cor base do texto e fontes */
         .rbc-calendar { color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
-        
-        /* 1. REMOVE O LABEL PADRÃO DE HORA (LIBERA ESPAÇO NO TOPO) */
         .rbc-event-label { display: none !important; }
-        
-        /* 2. FORÇA A ALTURA DA LINHA PARA 100PX (PARA CABER TUDO) */
-        .rbc-timeslot-group { min-height: 100px !important; }
-
-        /* Estilização da Toolbar */
+        .rbc-timeslot-group { min-height: 120px !important; }
         .rbc-toolbar button { color: #fff; border: 1px solid #495057; background: transparent; }
         .rbc-toolbar button:hover { background-color: #343a40; }
         .rbc-toolbar button.rbc-active { background-color: #0d6efd; border-color: #0d6efd; }
-        
-        /* Cores das células e linhas */
         .rbc-off-range-bg { background-color: #2c3034 !important; }
         .rbc-today { background-color: #313b4b !important; }
         .rbc-time-view, .rbc-header, .rbc-time-content, .rbc-timeslot-group { border-color: #495057; }
         .rbc-day-slot .rbc-time-slot { border-top: 1px solid #3a3f45; }
-        
-        /* Remove padding padrão do evento da biblioteca */
         .rbc-event { padding: 0 !important; background: transparent !important; outline: none; box-shadow: none; }
       `}</style>
 
@@ -283,11 +294,9 @@ export default function Agenda() {
         <Calendar
           localizer={localizer}
           events={eventos}
-          
           views={['week']}
           view={view}
           onView={setView}
-          
           date={date}
           onNavigate={setDate}
           step={30}
@@ -315,6 +324,7 @@ export default function Agenda() {
               <Form.Label>Título*</Form.Label>
               <Form.Control type="text" value={modalData?.titulo || ''} onChange={e => setModalData(d => ({ ...d, titulo: e.target.value }))} required className="bg-dark text-white border-secondary" />
             </Form.Group>
+            
             <Row>
               <Col xs={12} md={6}>
                  <Form.Group className="mb-3"><Form.Label>Data e Hora*</Form.Label>
@@ -329,23 +339,63 @@ export default function Agenda() {
                 </Form.Group>
               </Col>
             </Row>
-            <Form.Group className="mb-3"><Form.Label>Cliente*</Form.Label>
-              <InputGroup>
-                <InputGroup.Text className="bg-secondary border-secondary text-white"><i className="bi bi-search" /></InputGroup.Text>
-                <Form.Control placeholder="Buscar..." value={clienteFiltro} onChange={e => setClienteFiltro(e.target.value)} className="bg-dark text-white border-secondary" />
-              </InputGroup>
-              <Form.Select className="mt-2 bg-dark text-white border-secondary" value={modalData?.clienteId || ''} onChange={e => setModalData(d => ({ ...d, clienteId: e.target.value }))} required>
-                <option value="">Selecione...</option>
-                {clientesFiltrados.map(c => (<option key={c.id} value={c.id}>{c.nome} {c.endereco ? `- ${c.endereco}` : ''}</option>))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3"><Form.Label>Status</Form.Label>
-              <Form.Select value={modalData?.status || 'EM_ABERTO'} onChange={e => setModalData(d => ({ ...d, status: e.target.value }))} className="bg-dark text-white border-secondary">
-                {STATUS_LIST.map(s => (<option key={s.value} value={s.value}>{s.label}</option>))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3"><Form.Label>Descrição (Qtd Pessoas)</Form.Label>
-              <Form.Control type="text" placeholder="Ex: 10 pessoas" value={modalData?.descricao || ''} onChange={e => setModalData(d => ({ ...d, descricao: e.target.value }))} className="bg-dark text-white border-secondary" />
+
+            <Row>
+                <Col xs={12} md={6}>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Cliente*</Form.Label>
+                        <InputGroup>
+                            <InputGroup.Text className="bg-secondary border-secondary text-white"><i className="bi bi-search" /></InputGroup.Text>
+                            <Form.Control placeholder="Buscar..." value={clienteFiltro} onChange={e => setClienteFiltro(e.target.value)} className="bg-dark text-white border-secondary" />
+                        </InputGroup>
+                        <Form.Select className="mt-2 bg-dark text-white border-secondary" value={modalData?.clienteId || ''} onChange={e => setModalData(d => ({ ...d, clienteId: e.target.value }))} required>
+                            <option value="">Selecione...</option>
+                            {clientesFiltrados.map(c => (<option key={c.id} value={c.id}>{c.nome} {c.endereco ? `- ${c.endereco}` : ''}</option>))}
+                        </Form.Select>
+                    </Form.Group>
+                </Col>
+                <Col xs={12} md={6}>
+                     <Form.Group className="mb-3">
+                        <Form.Label>Agendado Por</Form.Label>
+                        <Form.Control 
+                            type="text" 
+                            placeholder="Nome do responsável"
+                            value={modalData?.criadoPor || ''} 
+                            onChange={e => setModalData(d => ({ ...d, criadoPor: e.target.value }))} 
+                            className="bg-dark text-white border-secondary" 
+                        />
+                        <Form.Text className="text-white-50" style={{fontSize: '0.7rem'}}>
+                            (Padrão: Usuário Logado)
+                        </Form.Text>
+                    </Form.Group>
+                </Col>
+            </Row>
+
+            <Row>
+                <Col xs={12} md={6}>
+                    <Form.Group className="mb-3"><Form.Label>Status</Form.Label>
+                        <Form.Select value={modalData?.status || 'EM_ABERTO'} onChange={e => setModalData(d => ({ ...d, status: e.target.value }))} className="bg-dark text-white border-secondary">
+                            {STATUS_LIST.map(s => (<option key={s.value} value={s.value}>{s.label}</option>))}
+                        </Form.Select>
+                    </Form.Group>
+                </Col>
+                {/* --- NOVO CAMPO NO MODAL: Valor Pago --- */}
+                <Col xs={12} md={6}>
+                    <Form.Group className="mb-3"><Form.Label>Valor Pago (R$)</Form.Label>
+                        <Form.Control 
+                            type="number" 
+                            step="0.01"
+                            placeholder="0,00" 
+                            value={modalData?.valorPago || ''} 
+                            onChange={e => setModalData(d => ({ ...d, valorPago: e.target.value }))} 
+                            className="bg-dark text-white border-secondary" 
+                        />
+                    </Form.Group>
+                </Col>
+            </Row>
+
+            <Form.Group className="mb-3"><Form.Label>Descrição / Obs</Form.Label>
+              <Form.Control type="text" placeholder="Observações do serviço" value={modalData?.descricao || ''} onChange={e => setModalData(d => ({ ...d, descricao: e.target.value }))} className="bg-dark text-white border-secondary" />
             </Form.Group>
           </Modal.Body>
           <Modal.Footer className="bg-dark border-secondary">

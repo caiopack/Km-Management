@@ -33,11 +33,19 @@ public class Task {
     @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
-    // Mudança: de LocalDate para LocalDateTime para guardar hora
     @Column(name = "data_servico")
     private LocalDateTime dataServico;
 
-    // Getters e setters
+    @Column(name = "criado_por")
+    private String criadoPor;
+
+    // --- NOVO CAMPO: Valor Pago ---
+    @Column(name = "valor_pago")
+    private Double valorPago;
+
+    public Task() {}
+
+    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -58,4 +66,10 @@ public class Task {
 
     public LocalDateTime getDataServico() { return dataServico; }
     public void setDataServico(LocalDateTime dataServico) { this.dataServico = dataServico; }
+
+    public String getCriadoPor() { return criadoPor; }
+    public void setCriadoPor(String criadoPor) { this.criadoPor = criadoPor; }
+
+    public Double getValorPago() { return valorPago; }
+    public void setValorPago(Double valorPago) { this.valorPago = valorPago; }
 }

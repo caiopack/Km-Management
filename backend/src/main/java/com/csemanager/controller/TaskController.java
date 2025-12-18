@@ -25,7 +25,6 @@ public class TaskController {
     @Autowired
     private ClienteRepository clienteRepository;
 
-    // Mudança: Formato agora inclui horas e minutos
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private TaskDTO toDTO(Task t) {
@@ -39,8 +38,10 @@ public class TaskController {
                 c != null ? c.getId() : null,
                 c != null ? c.getNome() : null,
                 c != null ? c.getEndereco() : null,
-                // Formata para String ao enviar pro front
-                t.getDataServico() != null ? t.getDataServico().format(DATE_TIME_FORMATTER) : null
+                t.getDataServico() != null ? t.getDataServico().format(DATE_TIME_FORMATTER) : null,
+                t.getCriadoPor(),
+                // Mapeia valor pago
+                t.getValorPago() 
         );
     }
 
@@ -50,13 +51,17 @@ public class TaskController {
         task.setDescricao(dto.getDescricao());
         task.setStatus(dto.getStatus());
         task.setPrioridade(dto.getPrioridade());
+        task.setCriadoPor(dto.getCriadoPor());
+        
+        // Mapeia valor pago
+        task.setValorPago(dto.getValorPago());
+
         if (dto.getClienteId() != null) {
             Optional<Cliente> cliente = clienteRepository.findById(dto.getClienteId());
             cliente.ifPresent(task::setCliente);
         }
-        // Parse da String vinda do front
+        
         if (dto.getDataServico() != null && !dto.getDataServico().isEmpty()) {
-            // Se vier com "T" (formato ISO do input datetime-local), substitui por espaço
             String cleanDate = dto.getDataServico().replace("T", " ");
             task.setDataServico(LocalDateTime.parse(cleanDate, DATE_TIME_FORMATTER));
         }
@@ -83,12 +88,18 @@ public class TaskController {
     public ResponseEntity<TaskDTO> atualizar(@PathVariable Long id, @RequestBody TaskDTO dados) {
         return repository.findById(id).map(task -> {
             Task nova = toEntity(dados);
+            
             task.setTitulo(nova.getTitulo());
             task.setDescricao(nova.getDescricao());
             task.setStatus(nova.getStatus());
             task.setPrioridade(nova.getPrioridade());
             task.setCliente(nova.getCliente());
             task.setDataServico(nova.getDataServico());
+            
+            // Atualiza campos opcionais
+            if (nova.getCriadoPor() != null) task.setCriadoPor(nova.getCriadoPor());
+            task.setValorPago(nova.getValorPago()); 
+
             return ResponseEntity.ok(toDTO(repository.save(task)));
         }).orElse(ResponseEntity.notFound().build());
     }
