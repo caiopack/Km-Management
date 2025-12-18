@@ -42,6 +42,17 @@ const PRIORIDADE_COLORS = {
   3: '#198754'  // Baixa
 };
 
+// Lista estrita de horários permitidos
+const HORARIOS_PERMITIDOS = [
+  '15:00', '15:30',
+  '16:00', '16:30',
+  '17:00', '17:30',
+  '18:00', '18:30',
+  '19:00', '19:30',
+  '20:00', '20:30',
+  '21:00', '21:30'
+];
+
 const DURACAO_PADRAO_MINUTOS = 30;
 
 // --- CARD DO EVENTO ---
@@ -51,14 +62,12 @@ const CustomEvent = ({ event }) => {
 
   const nome = resource.clienteNome ? resource.clienteNome.split(' ')[0] : 'Cliente';
   
-  // Descrição curta
   const desc = resource.descricao || 'S/ Obs';
   const descCurta = desc.length > 25 ? desc.substring(0, 25) + '...' : desc;
   
   const tel = resource.clienteTelefone || 'S/ Tel';
   const responsavel = resource.criadoPor || 'Admin';
 
-  // Formata valor se existir
   const valorFormatado = resource.valorPago 
     ? parseFloat(resource.valorPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : null;
@@ -154,7 +163,7 @@ export default function Agenda() {
             clienteTelefone: telefoneCliente,
             duracao: duracaoMin,
             criadoPor: t.criadoPor || 'Admin',
-            valorPago: t.valorPago // Novo campo
+            valorPago: t.valorPago 
           }
         };
       });
@@ -177,6 +186,7 @@ export default function Agenda() {
     }
   }
 
+  // --- ABRIR MODAL COM SEPARAÇÃO DATA / HORA ---
   function openModal(tarefa = null, dataPreSelecionada = null) {
     let usuarioPadrao = 'Admin';
     const userStr = localStorage.getItem('user');
@@ -188,21 +198,37 @@ export default function Agenda() {
     }
 
     if (tarefa) {
+      // Backend manda "yyyy-MM-ddTHH:mm:ss" ou similar
+      // Vamos quebrar em Data e Hora para os campos separados
+      const dataObj = new Date(tarefa.dataServico);
+      const dataStr = format(dataObj, 'yyyy-MM-dd');
+      const horaStr = format(dataObj, 'HH:mm');
+
       setModalData({
         ...tarefa,
         clienteId: tarefa.clienteId, 
-        dataServico: tarefa.dataServico ? tarefa.dataServico.substring(0, 16) : '',
+        datePart: dataStr,
+        timePart: horaStr,
         criadoPor: tarefa.criadoPor || usuarioPadrao,
         valorPago: tarefa.valorPago || '' 
       });
     } else {
-      let dataStr = '';
+      let initialDate = format(new Date(), 'yyyy-MM-dd');
+      let initialTime = '15:00'; // Default
+
       if (dataPreSelecionada) {
-        const offset = dataPreSelecionada.getTimezoneOffset() * 60000;
-        dataStr = new Date(dataPreSelecionada.getTime() - offset).toISOString().slice(0, 16);
+        initialDate = format(dataPreSelecionada, 'yyyy-MM-dd');
+        // Tenta pegar a hora do slot clicado, se for válida
+        const slotTime = format(dataPreSelecionada, 'HH:mm');
+        if (HORARIOS_PERMITIDOS.includes(slotTime)) {
+            initialTime = slotTime;
+        }
       }
+
       setModalData({
-        titulo: '', descricao: '', status: 'EM_ABERTO', prioridade: 2, clienteId: '', dataServico: dataStr,
+        titulo: '', descricao: '', status: 'EM_ABERTO', prioridade: 2, clienteId: '',
+        datePart: initialDate,
+        timePart: initialTime,
         criadoPor: usuarioPadrao, valorPago: ''
       });
     }
@@ -216,11 +242,14 @@ export default function Agenda() {
   async function handleSubmit(e) {
     e.preventDefault();
     setValidated(true);
-    if (!modalData?.titulo || !modalData?.clienteId || !modalData?.dataServico) return;
+    if (!modalData?.titulo || !modalData?.clienteId || !modalData?.datePart || !modalData?.timePart) return;
     
-    // Converte valorPago para número se tiver valor
+    // Constrói a data completa para o backend: "yyyy-MM-dd HH:mm"
+    const finalDataServico = `${modalData.datePart} ${modalData.timePart}`;
+
     const payload = { 
         ...modalData,
+        dataServico: finalDataServico,
         valorPago: modalData.valorPago ? parseFloat(modalData.valorPago) : null
     };
 
@@ -301,8 +330,8 @@ export default function Agenda() {
           onNavigate={setDate}
           step={30}
           timeslots={1}
-          min={new Date(0, 0, 0, 7, 0, 0)}
-          max={new Date(0, 0, 0, 22, 0, 0)}
+          min={new Date(0, 0, 0, 15, 0, 0)} // Exibição: 15:00
+          max={new Date(0, 0, 0, 21, 30, 0)} // Exibição: 21:30
           components={{ event: CustomEvent }}
           startAccessor="start"
           endAccessor="end"
@@ -325,17 +354,33 @@ export default function Agenda() {
               <Form.Control type="text" value={modalData?.titulo || ''} onChange={e => setModalData(d => ({ ...d, titulo: e.target.value }))} required className="bg-dark text-white border-secondary" />
             </Form.Group>
             
+            {/* --- MUDANÇA: CAMPOS SEPARADOS DE DATA E HORA --- */}
             <Row>
               <Col xs={12} md={6}>
-                 <Form.Group className="mb-3"><Form.Label>Data e Hora*</Form.Label>
-                  <Form.Control type="datetime-local" step={1800} value={modalData?.dataServico || ''} onChange={e => setModalData(d => ({ ...d, dataServico: e.target.value }))} required className="bg-dark text-white border-secondary" />
+                 <Form.Group className="mb-3">
+                    <Form.Label>Data*</Form.Label>
+                    <Form.Control 
+                        type="date" 
+                        value={modalData?.datePart || ''} 
+                        onChange={e => setModalData(d => ({ ...d, datePart: e.target.value }))} 
+                        required 
+                        className="bg-dark text-white border-secondary" 
+                    />
                 </Form.Group>
               </Col>
               <Col xs={12} md={6}>
-                <Form.Group className="mb-3"><Form.Label>Prioridade</Form.Label>
-                  <Form.Select value={modalData?.prioridade || 2} onChange={e => setModalData(d => ({ ...d, prioridade: parseInt(e.target.value) }))} className="bg-dark text-white border-secondary">
-                    <option value={1}>Alta</option><option value={2}>Média</option><option value={3}>Baixa</option>
-                  </Form.Select>
+                <Form.Group className="mb-3">
+                    <Form.Label>Horário* (15:00 - 21:30)</Form.Label>
+                    <Form.Select 
+                        value={modalData?.timePart || ''} 
+                        onChange={e => setModalData(d => ({ ...d, timePart: e.target.value }))} 
+                        required 
+                        className="bg-dark text-white border-secondary"
+                    >
+                        {HORARIOS_PERMITIDOS.map(hora => (
+                            <option key={hora} value={hora}>{hora}</option>
+                        ))}
+                    </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
@@ -379,7 +424,16 @@ export default function Agenda() {
                         </Form.Select>
                     </Form.Group>
                 </Col>
-                {/* --- NOVO CAMPO NO MODAL: Valor Pago --- */}
+                <Col xs={12} md={6}>
+                    <Form.Group className="mb-3"><Form.Label>Prioridade</Form.Label>
+                        <Form.Select value={modalData?.prioridade || 2} onChange={e => setModalData(d => ({ ...d, prioridade: parseInt(e.target.value) }))} className="bg-dark text-white border-secondary">
+                            <option value={1}>Alta</option><option value={2}>Média</option><option value={3}>Baixa</option>
+                        </Form.Select>
+                    </Form.Group>
+                </Col>
+            </Row>
+
+            <Row>
                 <Col xs={12} md={6}>
                     <Form.Group className="mb-3"><Form.Label>Valor Pago (R$)</Form.Label>
                         <Form.Control 
@@ -392,11 +446,12 @@ export default function Agenda() {
                         />
                     </Form.Group>
                 </Col>
+                <Col xs={12} md={6}>
+                    <Form.Group className="mb-3"><Form.Label>Descrição / Obs</Form.Label>
+                        <Form.Control type="text" placeholder="Observações do serviço" value={modalData?.descricao || ''} onChange={e => setModalData(d => ({ ...d, descricao: e.target.value }))} className="bg-dark text-white border-secondary" />
+                    </Form.Group>
+                </Col>
             </Row>
-
-            <Form.Group className="mb-3"><Form.Label>Descrição / Obs</Form.Label>
-              <Form.Control type="text" placeholder="Observações do serviço" value={modalData?.descricao || ''} onChange={e => setModalData(d => ({ ...d, descricao: e.target.value }))} className="bg-dark text-white border-secondary" />
-            </Form.Group>
           </Modal.Body>
           <Modal.Footer className="bg-dark border-secondary">
              {modalData?.id && (<Button variant="outline-danger" onClick={() => { setShowConfirm(true); setTarefaParaExcluir(modalData.id); }} className="me-auto"><i className="bi bi-trash-fill me-1"/> Excluir</Button>)}
