@@ -1,7 +1,7 @@
-package com.csemanager.security;
+package com.kmmanagement.security;
 
-import com.csemanager.model.User;
-import com.csemanager.repository.UserRepository;
+import com.kmmanagement.model.User;
+import com.kmmanagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

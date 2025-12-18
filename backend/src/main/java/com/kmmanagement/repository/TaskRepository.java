@@ -1,6 +1,6 @@
-package com.csemanager.repository;
+package com.kmmanagement.repository;
 
-import com.csemanager.model.Task;
+import com.kmmanagement.model.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

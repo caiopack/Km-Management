@@ -1,4 +1,4 @@
-package com.csemanager.controller;
+package com.kmmanagement.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

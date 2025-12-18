@@ -1,8 +1,8 @@
-package com.csemanager.controller;
+package com.kmmanagement.controller;
 
-import com.csemanager.dto.ClienteDTO;
-import com.csemanager.model.Cliente;
-import com.csemanager.repository.ClienteRepository;
+import com.kmmanagement.dto.ClienteDTO;
+import com.kmmanagement.model.Cliente;
+import com.kmmanagement.repository.ClienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

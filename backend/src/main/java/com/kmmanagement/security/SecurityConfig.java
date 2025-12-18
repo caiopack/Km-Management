@@ -1,4 +1,4 @@
-package com.csemanager.security;
+package com.kmmanagement.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

@@ -1,4 +1,4 @@
-package com.csemanager.dto;
+package com.kmmanagement.dto;
 
 public class TaskDTO {
     private Long id;

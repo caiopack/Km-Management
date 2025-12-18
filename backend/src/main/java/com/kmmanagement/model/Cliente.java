@@ -1,4 +1,4 @@
-package com.csemanager.model;
+package com.kmmanagement.model;
 
 import jakarta.persistence.*;
 

@@ -1,4 +1,4 @@
-package com.csemanager.config;
+package com.kmmanagement.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

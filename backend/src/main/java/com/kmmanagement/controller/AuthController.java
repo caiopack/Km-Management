@@ -1,11 +1,11 @@
-package com.csemanager.controller;
+package com.kmmanagement.controller;
 
-import com.csemanager.dto.LoginRequestDTO;
-import com.csemanager.dto.RegisterRequestDTO;
-import com.csemanager.dto.ResponseDTO;
-import com.csemanager.model.User;
-import com.csemanager.repository.UserRepository;
-import com.csemanager.security.TokenService;
+import com.kmmanagement.dto.LoginRequestDTO;
+import com.kmmanagement.dto.RegisterRequestDTO;
+import com.kmmanagement.dto.ResponseDTO;
+import com.kmmanagement.model.User;
+import com.kmmanagement.repository.UserRepository;
+import com.kmmanagement.security.TokenService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;

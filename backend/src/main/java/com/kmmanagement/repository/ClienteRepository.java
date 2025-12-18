@@ -1,6 +1,6 @@
-package com.csemanager.repository;
+package com.kmmanagement.repository;
 
-import com.csemanager.model.Cliente;
+import com.kmmanagement.model.Cliente;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
