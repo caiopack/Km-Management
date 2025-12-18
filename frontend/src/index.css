@@ -1,7 +1,7 @@
 :root {
   --bs-bg-main:    #1A1A1A;
   --bs-bg-sidebar: #2A2A2A;
-  --bs-primary:    #0066FF;
+  --bs-primary:    #FF0000; /* Vermelho mais vivo */
 }
 .bg-main    { background-color: var(--bs-bg-main) !important; }
 .bg-sidebar { background-color: var(--bs-bg-sidebar) !important; }

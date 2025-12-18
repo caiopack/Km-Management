@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
-import logo from '../assets/cse.png'; // ajuste conforme sua estrutura
+import logoImg from '../assets/kartLogo.png';
 
 export default function AppLayout() {
   const navigate = useNavigate();
@@ -28,8 +28,9 @@ export default function AppLayout() {
           <nav className="navbar navbar-dark bg-sidebar fixed-top d-lg-none">
             <div className="container-fluid d-flex justify-content-between align-items-center px-3">
               <img
-                src={logo}
-                alt="CSE Manager"
+                /* MUDANÇA AQUI: de src={logo} para src={logoImg} */
+                src={logoImg}
+                alt="Kart Mônaco"
                 className="navbar-brand mb-0"
                 style={{ maxHeight: 55, objectFit: 'contain' }}
               />

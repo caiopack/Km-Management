@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import logo from '../assets/cse.png';
+import logoImg from '../assets/kartLogo.png';
 
 export default function Sidebar({ mobileClose }) {
   const { pathname } = useLocation();
@@ -48,7 +48,8 @@ export default function Sidebar({ mobileClose }) {
     <div className="d-flex flex-column h-100 p-3 bg-sidebar text-white">
       {!mobileClose && (
         <div className="text-center mb-4">
-          <img src={logo} alt="CSE Manager" style={{ width: '100%', maxWidth: 150 }} />
+          {/* MUDANÇA AQUI: de src={logo} para src={logoImg} */}
+          <img src={logoImg} alt="Kart Mônaco" style={{ width: '100%', maxWidth: 150 }} />
         </div>
       )}
 
