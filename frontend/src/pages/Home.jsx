@@ -15,8 +15,11 @@ const STATUS_LABELS = {
   EM_ANDAMENTO: 'Em Andamento',
   FINALIZADO: 'Finalizado',
 };
+
 const PRIORIDADE_LABELS = { 1: 'Alta', 2: 'Média', 3: 'Baixa' };
-const COLORS = ['#0066FF', '#FFC107', '#198754'];
+
+// Cores atualizadas para o padrão Kart Mônaco
+const COLORS = ['#FF0000', '#FFC107', '#198754']; 
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -40,7 +43,7 @@ export default function Dashboard() {
   }, []);
   const isMobile = windowW < 700;
 
-  // Protege rota (array de dependência FIXO!)
+  // Protege rota
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -49,8 +52,7 @@ export default function Dashboard() {
     } else {
       setAuthed(true);
     }
-    // eslint-disable-next-line
-  }, []);
+  }, [navigate]);
 
   // Carrega dados
   useEffect(() => {
@@ -67,7 +69,9 @@ export default function Dashboard() {
             t.dataServico &&
             new Date(t.dataServico).toDateString() === hoje.toDateString()
         ).length;
+
         const andamento = tfs.filter((t) => t.status === 'EM_ANDAMENTO').length;
+
         function isThisWeek(dateStr) {
           const d = new Date(dateStr);
           const now = new Date();
@@ -77,15 +81,18 @@ export default function Dashboard() {
           weekEnd.setDate(weekStart.getDate() + 6);
           return d >= weekStart && d <= weekEnd;
         }
+
         const finalizadaSemana = tfs.filter(
           (t) => t.status === 'FINALIZADO' && t.dataServico && isThisWeek(t.dataServico)
         ).length;
+
         const atrasadas = tfs.filter(
           (t) =>
             ['EM_ABERTO', 'EM_ANDAMENTO'].includes(t.status) &&
             t.dataServico &&
             new Date(t.dataServico) < hoje
         ).length;
+
         const proximo = [...tfs]
           .filter((t) => t.dataServico && new Date(t.dataServico) >= hoje)
           .sort((a, b) => new Date(a.dataServico) - new Date(b.dataServico));
@@ -95,6 +102,7 @@ export default function Dashboard() {
           { name: 'Em Andamento', value: tfs.filter((t) => t.status === 'EM_ANDAMENTO').length },
           { name: 'Finalizado', value: tfs.filter((t) => t.status === 'FINALIZADO').length },
         ];
+
         const porPrioridade = [1, 2, 3].map((prio) => ({
           name: PRIORIDADE_LABELS[prio],
           value: tfs.filter((t) => t.prioridade === prio).length,
@@ -114,9 +122,7 @@ export default function Dashboard() {
         navigate('/login', { replace: true });
       }
     })();
-  }, [authed, navigate, windowW]);
-
-  if (authed === false) return null;
+  }, [authed, navigate]);
 
   // Label externa do gráfico pizza
   function PieExternalLabel({ cx, cy, midAngle, outerRadius, fill, value, index }) {
@@ -141,7 +147,6 @@ export default function Dashboard() {
     );
   }
 
-  // CustomTooltip ajustado para ler payload[0].payload.name e payload[0].payload.value
   function CustomTooltip({ active, payload }) {
     if (active && payload && payload.length) {
       const { name, value } = payload[0].payload;
@@ -163,7 +168,6 @@ export default function Dashboard() {
     return null;
   }
 
-  // Tarefas para mostrar
   const tarefasParaMostrar = isMobile ? stats.proximo : stats.proximo.slice(0, 4);
 
   return (
@@ -184,7 +188,7 @@ export default function Dashboard() {
           paddingLeft: isMobile ? 8 : 32,
           paddingRight: isMobile ? 8 : 32,
           paddingTop: isMobile ? 10 : 30,
-          paddingBottom: isMobile ? 28 : 20, // Mais espaço no fim!
+          paddingBottom: isMobile ? 28 : 20,
         }}
       >
         {/* HEADER */}
@@ -194,7 +198,7 @@ export default function Dashboard() {
               Dashboard
             </h2>
             <div className="text-secondary fs-6 mb-2" style={{ maxWidth: 480, marginLeft: isMobile ? 5 : 0 }}>
-              Visão geral de tarefas e clientes da <b>CSE & Refrigeração</b>
+              Visão geral de tarefas e clientes do <b>Kart Mônaco</b>
             </div>
           </Col>
           <Col xs={12} md={4} className={`d-flex ${isMobile ? "justify-content-start" : "justify-content-md-end"} align-items-center mb-2 gap-2`}>
@@ -203,6 +207,7 @@ export default function Dashboard() {
               className="fw-bold"
               size={isMobile ? "sm" : "md"}
               onClick={() => navigate('/agenda')}
+              style={{ backgroundColor: '#FF0000', borderColor: '#FF0000' }}
             >
               <i className="bi bi-kanban-fill me-2" /> Ver Agenda
             </Button>
@@ -222,7 +227,8 @@ export default function Dashboard() {
           {[
             {
               icon: "calendar-event",
-              color: "text-primary",
+              color: "text-white",
+              bgIconColor: "#FF0000",
               label: "Pendentes Hoje",
               value: stats.pendentesHoje,
               valueColor: "#fff",
@@ -230,6 +236,7 @@ export default function Dashboard() {
             {
               icon: "play-fill",
               color: "text-warning",
+              bgIconColor: "rgba(255, 193, 7, 0.1)",
               label: "Em Andamento",
               value: stats.andamento,
               valueColor: "#FFC107",
@@ -237,6 +244,7 @@ export default function Dashboard() {
             {
               icon: "check-circle-fill",
               color: "text-success",
+              bgIconColor: "rgba(25, 135, 84, 0.1)",
               label: "Finalizadas na Semana",
               value: stats.finalizadaSemana,
               valueColor: "#198754",
@@ -244,6 +252,7 @@ export default function Dashboard() {
             {
               icon: "exclamation-circle",
               color: "text-danger",
+              bgIconColor: "rgba(220, 53, 69, 0.1)",
               label: "Tarefas Atrasadas",
               value: stats.atrasadas,
               valueColor: "#dc3545",
@@ -259,16 +268,26 @@ export default function Dashboard() {
             >
               <Card className="bg-dark text-white shadow-sm h-100 rounded-4 border-0 w-100 d-flex flex-row align-items-center justify-content-center"
                 style={{
-                  minHeight: isMobile ? 56 : 64,
-                  padding: isMobile ? '3px' : '8px',
+                  minHeight: isMobile ? 80 : 100,
+                  padding: isMobile ? '5px' : '12px',
                   textAlign: 'center',
                   maxWidth: isMobile ? 320 : 330,
                   margin: '0 auto',
                 }}>
                 <Card.Body className="p-1 d-flex flex-column align-items-center justify-content-center">
-                  <i className={`bi bi-${card.icon} fs-2 ${card.color} mb-2`} style={{ minWidth: 22 }} />
-                  <div className="fs-6 text-secondary" style={{ fontSize: isMobile ? 13 : 15 }}>{card.label}</div>
-                  <div className="fw-bold" style={{ fontSize: isMobile ? 16 : 28, color: card.valueColor }}>
+                  <div 
+                    className="rounded-circle d-flex align-items-center justify-content-center mb-2"
+                    style={{ 
+                      width: 40, 
+                      height: 40, 
+                      backgroundColor: card.bgIconColor,
+                      color: card.color === "text-white" ? "#fff" : undefined
+                    }}
+                  >
+                    <i className={`bi bi-${card.icon} fs-4 ${card.color === "text-white" ? "" : card.color}`} />
+                  </div>
+                  <div className="text-secondary" style={{ fontSize: isMobile ? 11 : 13 }}>{card.label}</div>
+                  <div className="fw-bold" style={{ fontSize: isMobile ? 18 : 24, color: card.valueColor }}>
                     {card.value}
                   </div>
                 </Card.Body>
@@ -283,7 +302,7 @@ export default function Dashboard() {
             <Card className="bg-dark text-white shadow-sm h-100 rounded-4 border-0" style={{ minHeight: isMobile ? 130 : 230 }}>
               <Card.Body>
                 <div className="fw-bold mb-2" style={{ fontSize: isMobile ? 14 : 17, letterSpacing: -0.5 }}>
-                  <i className="bi bi-pie-chart me-2 text-primary" /> Distribuição de Tarefas por Status
+                  <i className="bi bi-pie-chart me-2" style={{ color: '#FF0000' }} /> Distribuição de Tarefas por Status
                 </div>
                 <div style={{
                   width: '100%',
@@ -322,7 +341,7 @@ export default function Dashboard() {
             <Card className="bg-dark text-white shadow-sm h-100 rounded-4 border-0" style={{ minHeight: isMobile ? 140 : 230 }}>
               <Card.Body>
                 <div className="fw-bold mb-2" style={{ fontSize: isMobile ? 14 : 17, letterSpacing: -0.5 }}>
-                  <i className="bi bi-bar-chart-steps me-2 text-primary" /> Tarefas por Prioridade
+                  <i className="bi bi-bar-chart-steps me-2" style={{ color: '#FF0000' }} /> Tarefas por Prioridade
                 </div>
                 <div style={{
                   width: '100%',
@@ -338,20 +357,20 @@ export default function Dashboard() {
                       barCategoryGap={isMobile ? '18%' : '14%'}
                       margin={{ left: isMobile ? 32 : 52, right: 16, top: 8, bottom: 8 }}
                     >
-                      <XAxis type="number" allowDecimals={false} stroke="#fff" tick={{ fontSize: isMobile ? 10 : 15 }} />
+                      <XAxis type="number" allowDecimals={false} stroke="#fff" tick={{ fontSize: isMobile ? 10 : 12 }} />
                       <YAxis
                         dataKey="name"
                         type="category"
                         stroke="#fff"
                         width={isMobile ? 48 : 64}
-                        tick={{ fontSize: isMobile ? 11 : 15, fill: "#fff" }}
+                        tick={{ fontSize: isMobile ? 11 : 13, fill: "#fff" }}
                         interval={0}
                       />
-                      <Bar dataKey="value" barSize={isMobile ? 14 : 32} radius={[10, 10, 10, 10]}>
+                      <Bar dataKey="value" barSize={isMobile ? 14 : 32} radius={[0, 10, 10, 0]}>
                         {stats.porPrioridade.map((entry, index) => (
-                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={index} fill={COLORS[0]} /> // Mantendo barras vermelhas para prioridade
                         ))}
-                        <LabelList dataKey="value" position="right" fill="#fff" fontSize={isMobile ? 10 : 16} fontWeight={600} />
+                        <LabelList dataKey="value" position="right" fill="#fff" fontSize={isMobile ? 10 : 12} fontWeight={600} />
                       </Bar>
                       <Tooltip content={<CustomTooltip />} />
                     </BarChart>
@@ -382,7 +401,7 @@ export default function Dashboard() {
                   paddingRight: 4,
                   listStyle: 'none',
                   margin: 0,
-                  paddingBottom: isMobile ? 18 : 8 // Padding extra para garantir que nunca corte!
+                  paddingBottom: isMobile ? 18 : 8 
                 }}>
                   {tarefasParaMostrar.map((t) => (
                     <li
@@ -395,26 +414,25 @@ export default function Dashboard() {
                       }}
                     >
                       <Badge
-                        bg={t.status === 'FINALIZADO' ? 'success' : (t.status === 'EM_ANDAMENTO' ? 'warning' : 'primary')}
+                        bg={t.status === 'FINALIZADO' ? 'success' : (t.status === 'EM_ANDAMENTO' ? 'warning' : 'danger')}
                         className="me-2 mb-1"
-                        style={{ minWidth: 52, fontSize: isMobile ? 9 : 13 }}
+                        style={{ minWidth: 60, fontSize: isMobile ? 9 : 12, backgroundColor: t.status === 'EM_ABERTO' ? '#FF0000' : undefined }}
                       >
                         {STATUS_LABELS[t.status]}
                       </Badge>
                       <span className="fw-bold text-white mb-1"
                         style={{
                           minWidth: 50,
-                          maxWidth: isMobile ? 130 : 'unset', // No desktop não corta!
+                          maxWidth: isMobile ? 130 : 'unset',
                           overflow: isMobile ? 'hidden' : 'unset',
                           textOverflow: isMobile ? 'ellipsis' : 'unset',
                           whiteSpace: isMobile ? 'nowrap' : 'unset'
                         }}>
                         {t.titulo}
                       </span>
-                      <span className="ms-2 text-info mb-1"
+                      <span className="ms-auto text-secondary mb-1"
                         style={{
-                          fontSize: isMobile ? 10 : 15,
-                          minWidth: 40,
+                          fontSize: isMobile ? 10 : 13,
                           display: 'flex',
                           alignItems: 'center'
                         }}>
@@ -428,7 +446,7 @@ export default function Dashboard() {
             </Card>
           </Col>
         </Row>
-        <TipToast message="Acompanhe pendências, progresso e próximos serviços em tempo real neste painel." />
+        <TipToast message="Acompanhe pendências e próximos serviços do Kart Mônaco em tempo real." />
       </Container>
     </div>
   );

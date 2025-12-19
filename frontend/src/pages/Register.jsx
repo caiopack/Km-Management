@@ -16,7 +16,6 @@ export default function Register() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
 
-  // Definição do Vermelho Vivo para consistência
   const primaryRed = '#FF0000'; 
 
   useEffect(() => {
@@ -29,16 +28,23 @@ export default function Register() {
     e.preventDefault();
     setError('');
     try {
-      await axios.post('/auth/register', { name, email, password, registrationKey });
+      // Ajustado para bater exatamente com o RegisterRequestDTO do Backend
+      await axios.post('/auth/register', { 
+        name: name, 
+        email: email, 
+        password: password, 
+        secretKey: registrationKey // O Backend espera 'secretKey'
+      });
       navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Erro ao realizar cadastro');
+      // Captura a mensagem de erro específica (ex: "Chave secreta inválida")
+      setError(err.response?.data || 'Erro ao realizar cadastro');
     }
   };
 
   const containerStyle = {
     display: 'flex',
-    flexDirection: isMobile ? 'column' : 'row',
+    flexDirection: isMobile ? 'column-reverse' : 'row',
     height: '100vh',
     margin: 0
   };
@@ -94,20 +100,7 @@ export default function Register() {
 
   return (
     <div style={containerStyle}>
-      {/* Seção da Esquerda: Logo em destaque */}
-      <div style={headerStyle}>
-        <img 
-          src={logoImg} 
-          alt="Logo Kart Mônaco" 
-          style={{ 
-            width: isMobile ? '250px' : '450px', 
-            height: 'auto',
-            filter: 'drop-shadow(0px 10px 10px rgba(0, 0, 0, 0.3))' 
-          }} 
-        />
-      </div>
-
-      {/* Lado Direito: Formulário de Cadastro */}
+      {/* Lado Esquerdo: Formulário */}
       <div style={formStyle}>
         <div style={{ width: '100%', maxWidth: 450 }}>
           <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 700, color: '#FFF', textAlign: 'center', marginBottom: '0.5rem' }}>
@@ -205,6 +198,19 @@ export default function Register() {
             </div>
           </form>
         </div>
+      </div>
+
+      {/* Lado Direito: Logo */}
+      <div style={headerStyle}>
+        <img 
+          src={logoImg} 
+          alt="Logo Kart Mônaco" 
+          style={{ 
+            width: isMobile ? '250px' : '450px', 
+            height: 'auto',
+            filter: 'drop-shadow(0px 10px 10px rgba(0, 0, 0, 0.3))' 
+          }} 
+        />
       </div>
     </div>
   );
