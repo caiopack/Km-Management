@@ -59,7 +59,6 @@ const CustomEvent = ({ event }) => {
   const { resource } = event;
   const start = event.start;
 
-  // Nome do cliente ou Título do agendamento
   const nomeExibicao = resource.clienteNome 
     ? resource.clienteNome.split(' ')[0] 
     : (resource.titulo || 'Agendamento');
@@ -81,7 +80,6 @@ const CustomEvent = ({ event }) => {
   return (
     <div className="d-flex flex-column h-100 p-1" style={{ fontSize: '0.7rem', lineHeight: '1.1', overflow: 'hidden' }}>
       
-      {/* 1. Cabeçalho */}
       <div className="d-flex justify-content-between align-items-center mb-1">
         <span className="fw-bold text-truncate" title={nomeExibicao} style={{ maxWidth: '65%' }}>
            <i className={`bi ${resource.clienteNome ? 'bi-person-fill' : 'bi-calendar-event'} me-1`}></i>
@@ -92,7 +90,6 @@ const CustomEvent = ({ event }) => {
         </span>
       </div>
 
-      {/* 2. Corpo: Descrição, Qtd e Valores */}
       <div className="mb-auto">
          <div className="text-white-50 text-wrap text-truncate" style={{ maxHeight: '1.2em' }}>
            {descCurta}
@@ -109,7 +106,6 @@ const CustomEvent = ({ event }) => {
          </div>
       </div>
 
-      {/* 3. Rodapé */}
       <div className="border-top border-white-50 pt-1 mt-1">
           <div className="d-flex align-items-center text-white-50" style={{ marginBottom: '2px' }}>
             <i className="bi bi-whatsapp me-1 text-success"></i>
@@ -251,20 +247,14 @@ export default function Agenda() {
     setShowModal(false); setModalData(null); setValidated(false); setClienteFiltro('');
   }
 
-  // --- LÓGICA DE CÁLCULO AUTOMÁTICO ---
-  // Atualiza o valorTotal sempre que alterar Qtd ou Valor Pago
   const handleCalcChange = (field, value) => {
       setModalData(prev => {
           const newData = { ...prev, [field]: value };
-          
-          // Se tiver os dois valores, calcula o total
           const qtd = parseFloat(newData.quantidadePessoas);
           const unit = parseFloat(newData.valorPago);
-          
           if (!isNaN(qtd) && !isNaN(unit)) {
               newData.valorTotal = (qtd * unit).toFixed(2);
           }
-          
           return newData;
       });
   };
@@ -330,6 +320,13 @@ export default function Agenda() {
         .rbc-calendar { color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
         .rbc-event-label { display: none !important; }
         .rbc-timeslot-group { min-height: 150px !important; }
+
+        /* CUSTOMIZAÇÃO DO ÍCONE NATIVO DO CALENDÁRIO PARA VERMELHO */
+        ::-webkit-calendar-picker-indicator {
+            filter: invert(27%) sepia(91%) saturate(2352%) hue-rotate(339deg) brightness(93%) contrast(89%);
+            cursor: pointer;
+        }
+
         .rbc-toolbar button { color: #fff; border: 1px solid #495057; background: transparent; }
         .rbc-toolbar button:hover { background-color: #343a40; }
         .rbc-toolbar button.rbc-active { background-color: #0d6efd; border-color: #0d6efd; }
@@ -343,7 +340,11 @@ export default function Agenda() {
       <Row className="mb-3 align-items-center g-3">
         <Col md><h2 className="text-white m-0 fw-bold">Agenda</h2></Col>
         <Col md="auto" className="d-flex align-items-center gap-2">
-            <Form.Label className="text-white-50 m-0 fw-bold"><i className="bi bi-calendar-week me-1"/> Ir para:</Form.Label>
+            <Form.Label className="text-white-50 m-0 fw-bold">
+                {/* ÍCONE DESTAQUE EM VERMELHO */}
+                <i className="bi bi-calendar-week me-1" style={{ color: '#DC3545', fontSize: '1.2rem' }}/> 
+                Ir para:
+            </Form.Label>
             <Form.Control type="date" className="bg-dark text-white border-secondary" value={format(date, 'yyyy-MM-dd')} onChange={handleDateChange} style={{ width: 'auto' }} />
         </Col>
         <Col md="auto">
@@ -419,14 +420,21 @@ export default function Agenda() {
                 </Col>
                 <Col xs={12} md={6}>
                      <Form.Group className="mb-3">
-                        <Form.Label>Agendado Por</Form.Label>
-                        <Form.Control type="text" placeholder="Responsável" value={modalData?.criadoPor || ''} onChange={e => setModalData(d => ({ ...d, criadoPor: e.target.value }))} className="bg-dark text-white border-secondary" />
+                        <Form.Label>Criado Por</Form.Label>
+                        <Form.Control 
+                            type="text" 
+                            value={modalData?.criadoPor || ''} 
+                            readOnly 
+                            className="bg-secondary text-white border-secondary" 
+                        />
+                        <Form.Text className="text-white-50" style={{fontSize: '0.7rem'}}>
+                            Preenchimento automático
+                        </Form.Text>
                     </Form.Group>
                 </Col>
             </Row>
 
             <Row>
-                {/* --- MUDANÇA: Campos de Valor e Qtd --- */}
                 <Col xs={4}>
                     <Form.Group className="mb-3"><Form.Label>Qtd. Pessoas</Form.Label>
                         <Form.Control 
@@ -439,7 +447,7 @@ export default function Agenda() {
                     </Form.Group>
                 </Col>
                 <Col xs={4}>
-                    <Form.Group className="mb-3"><Form.Label>Valor/Pessoa (R$)</Form.Label>
+                    <Form.Group className="mb-3"><Form.Label>Valor/Pessoa</Form.Label>
                         <Form.Control 
                             type="number" 
                             step="0.01"
@@ -457,7 +465,7 @@ export default function Agenda() {
                             step="0.01"
                             placeholder="0,00" 
                             value={modalData?.valorTotal || ''} 
-                            readOnly // Calculado auto
+                            readOnly 
                             className="bg-secondary text-white border-secondary" 
                         />
                     </Form.Group>
