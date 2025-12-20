@@ -42,7 +42,6 @@ const PRIORIDADE_COLORS = {
   3: '#198754'  // Baixa
 };
 
-// Lista estrita de horários permitidos
 const HORARIOS_PERMITIDOS = [
   '15:00', '15:30',
   '16:00', '16:30',
@@ -53,14 +52,17 @@ const HORARIOS_PERMITIDOS = [
   '21:00', '21:30'
 ];
 
-const DURACAO_PADRAO_MINUTOS = 30;
+const DURACAO_PADRAO_MINUTOS = 20;
 
 // --- CARD DO EVENTO ---
 const CustomEvent = ({ event }) => {
   const { resource } = event;
   const start = event.start;
 
-  const nome = resource.clienteNome ? resource.clienteNome.split(' ')[0] : 'Cliente';
+  // Nome do cliente ou Título do agendamento
+  const nomeExibicao = resource.clienteNome 
+    ? resource.clienteNome.split(' ')[0] 
+    : (resource.titulo || 'Agendamento');
   
   const desc = resource.descricao || 'S/ Obs';
   const descCurta = desc.length > 25 ? desc.substring(0, 25) + '...' : desc;
@@ -68,47 +70,57 @@ const CustomEvent = ({ event }) => {
   const tel = resource.clienteTelefone || 'S/ Tel';
   const responsavel = resource.criadoPor || 'Admin';
 
-  const valorFormatado = resource.valorPago 
+  const valorPagoFmt = resource.valorPago 
     ? parseFloat(resource.valorPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    : null;
+    
+  const valorTotalFmt = resource.valorTotal 
+    ? parseFloat(resource.valorTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : null;
 
   return (
-    <div className="d-flex flex-column h-100 p-1" style={{ fontSize: '0.75rem', lineHeight: '1.2', overflow: 'hidden' }}>
+    <div className="d-flex flex-column h-100 p-1" style={{ fontSize: '0.7rem', lineHeight: '1.1', overflow: 'hidden' }}>
       
-      {/* 1. Nome e Hora */}
+      {/* 1. Cabeçalho */}
       <div className="d-flex justify-content-between align-items-center mb-1">
-        <span className="fw-bold text-truncate" title={resource.clienteNome} style={{ maxWidth: '65%' }}>
-           <i className="bi bi-person-fill me-1"></i>{nome}
+        <span className="fw-bold text-truncate" title={nomeExibicao} style={{ maxWidth: '65%' }}>
+           <i className={`bi ${resource.clienteNome ? 'bi-person-fill' : 'bi-calendar-event'} me-1`}></i>
+           {nomeExibicao}
         </span>
-        <span className="bg-black bg-opacity-25 px-1 rounded small fw-bold" style={{ fontSize: '0.7rem' }}>
+        <span className="bg-black bg-opacity-25 px-1 rounded small fw-bold" style={{ fontSize: '0.65rem' }}>
           {format(start, 'HH:mm')}
         </span>
       </div>
 
-      {/* 2. Descrição e Valor */}
+      {/* 2. Corpo: Descrição, Qtd e Valores */}
       <div className="mb-auto">
-         <div className="text-white-50 text-wrap" style={{ fontSize: '0.7rem', lineHeight: '1.1' }}>
+         <div className="text-white-50 text-wrap text-truncate" style={{ maxHeight: '1.2em' }}>
            {descCurta}
          </div>
-         {valorFormatado && (
-           <div className="text-success fw-bold mt-1" style={{ fontSize: '0.7rem' }}>
-             {valorFormatado}
-           </div>
-         )}
+         
+         <div className="d-flex flex-wrap gap-2 mt-1" style={{ fontSize: '0.65rem' }}>
+            {resource.quantidadePessoas && (
+                <span className="text-warning"><i className="bi bi-people-fill me-1"/>{resource.quantidadePessoas}</span>
+            )}
+            <div className="d-flex flex-column">
+                {valorTotalFmt && <span className="text-info fw-bold">Est: {valorTotalFmt}</span>}
+                {valorPagoFmt && <span className="text-success fw-bold">Pg: {valorPagoFmt}</span>}
+            </div>
+         </div>
       </div>
 
       {/* 3. Rodapé */}
       <div className="border-top border-white-50 pt-1 mt-1">
-          <div className="d-flex align-items-center text-white-50 mb-1" style={{ fontSize: '0.7rem' }}>
+          <div className="d-flex align-items-center text-white-50" style={{ marginBottom: '2px' }}>
             <i className="bi bi-whatsapp me-1 text-success"></i>
             <span className="text-truncate">{tel}</span>
           </div>
 
           <div className="d-flex justify-content-between align-items-center">
-             <div className="text-white-50 fst-italic text-truncate" style={{ fontSize: '0.65rem', maxWidth: '70%' }}>
-               <i className="bi bi-calendar-check me-1"></i>{responsavel}
+             <div className="text-white-50 fst-italic text-truncate" style={{ fontSize: '0.6rem', maxWidth: '70%' }}>
+               {responsavel}
              </div>
-             <span className="badge bg-light text-dark border px-1" style={{ fontSize: '0.65rem' }}>
+             <span className="badge bg-light text-dark border px-1" style={{ fontSize: '0.6rem' }}>
                 {resource.duracao}m
              </span>
           </div>
@@ -146,13 +158,13 @@ export default function Agenda() {
         const duracaoMin = differenceInMinutes(dataFim, dataInicio);
 
         const cliente = clientes.find(c => c.id === t.clienteId);
-        const nomeCliente = cliente ? cliente.nome : (t.clienteNome || '?');
+        const nomeCliente = cliente ? cliente.nome : (t.clienteNome || null);
         const enderecoCliente = cliente ? cliente.endereco : '';
         const telefoneCliente = cliente ? (cliente.telefone || cliente.celular) : '';
 
         return {
           id: t.id,
-          title: nomeCliente, 
+          title: nomeCliente || t.titulo, 
           start: dataInicio,
           end: dataFim,
           allDay: false, 
@@ -163,7 +175,9 @@ export default function Agenda() {
             clienteTelefone: telefoneCliente,
             duracao: duracaoMin,
             criadoPor: t.criadoPor || 'Admin',
-            valorPago: t.valorPago 
+            valorPago: t.valorPago,
+            valorTotal: t.valorTotal,
+            quantidadePessoas: t.quantidadePessoas
           }
         };
       });
@@ -186,7 +200,6 @@ export default function Agenda() {
     }
   }
 
-  // --- ABRIR MODAL COM SEPARAÇÃO DATA / HORA ---
   function openModal(tarefa = null, dataPreSelecionada = null) {
     let usuarioPadrao = 'Admin';
     const userStr = localStorage.getItem('user');
@@ -198,27 +211,26 @@ export default function Agenda() {
     }
 
     if (tarefa) {
-      // Backend manda "yyyy-MM-ddTHH:mm:ss" ou similar
-      // Vamos quebrar em Data e Hora para os campos separados
       const dataObj = new Date(tarefa.dataServico);
       const dataStr = format(dataObj, 'yyyy-MM-dd');
       const horaStr = format(dataObj, 'HH:mm');
 
       setModalData({
         ...tarefa,
-        clienteId: tarefa.clienteId, 
+        clienteId: tarefa.clienteId || '', 
         datePart: dataStr,
         timePart: horaStr,
         criadoPor: tarefa.criadoPor || usuarioPadrao,
-        valorPago: tarefa.valorPago || '' 
+        valorPago: tarefa.valorPago || '',
+        valorTotal: tarefa.valorTotal || '',
+        quantidadePessoas: tarefa.quantidadePessoas || ''
       });
     } else {
       let initialDate = format(new Date(), 'yyyy-MM-dd');
-      let initialTime = '15:00'; // Default
+      let initialTime = '15:00'; 
 
       if (dataPreSelecionada) {
         initialDate = format(dataPreSelecionada, 'yyyy-MM-dd');
-        // Tenta pegar a hora do slot clicado, se for válida
         const slotTime = format(dataPreSelecionada, 'HH:mm');
         if (HORARIOS_PERMITIDOS.includes(slotTime)) {
             initialTime = slotTime;
@@ -229,7 +241,7 @@ export default function Agenda() {
         titulo: '', descricao: '', status: 'EM_ABERTO', prioridade: 2, clienteId: '',
         datePart: initialDate,
         timePart: initialTime,
-        criadoPor: usuarioPadrao, valorPago: ''
+        criadoPor: usuarioPadrao, valorPago: '', valorTotal: '', quantidadePessoas: ''
       });
     }
     setClienteFiltro(''); setValidated(false); setShowModal(true);
@@ -239,18 +251,38 @@ export default function Agenda() {
     setShowModal(false); setModalData(null); setValidated(false); setClienteFiltro('');
   }
 
+  // --- LÓGICA DE CÁLCULO AUTOMÁTICO ---
+  // Atualiza o valorTotal sempre que alterar Qtd ou Valor Pago
+  const handleCalcChange = (field, value) => {
+      setModalData(prev => {
+          const newData = { ...prev, [field]: value };
+          
+          // Se tiver os dois valores, calcula o total
+          const qtd = parseFloat(newData.quantidadePessoas);
+          const unit = parseFloat(newData.valorPago);
+          
+          if (!isNaN(qtd) && !isNaN(unit)) {
+              newData.valorTotal = (qtd * unit).toFixed(2);
+          }
+          
+          return newData;
+      });
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
     setValidated(true);
-    if (!modalData?.titulo || !modalData?.clienteId || !modalData?.datePart || !modalData?.timePart) return;
+    if (!modalData?.titulo || !modalData?.datePart || !modalData?.timePart) return;
     
-    // Constrói a data completa para o backend: "yyyy-MM-dd HH:mm"
     const finalDataServico = `${modalData.datePart} ${modalData.timePart}`;
 
     const payload = { 
         ...modalData,
         dataServico: finalDataServico,
-        valorPago: modalData.valorPago ? parseFloat(modalData.valorPago) : null
+        valorPago: modalData.valorPago ? parseFloat(modalData.valorPago) : null,
+        valorTotal: modalData.valorTotal ? parseFloat(modalData.valorTotal) : null,
+        quantidadePessoas: modalData.quantidadePessoas ? parseInt(modalData.quantidadePessoas) : null,
+        clienteId: modalData.clienteId ? modalData.clienteId : null 
     };
 
     try {
@@ -297,7 +329,7 @@ export default function Agenda() {
       <style>{`
         .rbc-calendar { color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
         .rbc-event-label { display: none !important; }
-        .rbc-timeslot-group { min-height: 120px !important; }
+        .rbc-timeslot-group { min-height: 150px !important; }
         .rbc-toolbar button { color: #fff; border: 1px solid #495057; background: transparent; }
         .rbc-toolbar button:hover { background-color: #343a40; }
         .rbc-toolbar button.rbc-active { background-color: #0d6efd; border-color: #0d6efd; }
@@ -330,8 +362,8 @@ export default function Agenda() {
           onNavigate={setDate}
           step={30}
           timeslots={1}
-          min={new Date(0, 0, 0, 15, 0, 0)} // Exibição: 15:00
-          max={new Date(0, 0, 0, 21, 30, 0)} // Exibição: 21:30
+          min={new Date(0, 0, 0, 15, 0, 0)} 
+          max={new Date(0, 0, 0, 21, 30, 0)} 
           components={{ event: CustomEvent }}
           startAccessor="start"
           endAccessor="end"
@@ -350,36 +382,22 @@ export default function Agenda() {
         <Form noValidate validated={validated} onSubmit={handleSubmit}>
           <Modal.Body className="bg-dark text-white">
             <Form.Group className="mb-3">
-              <Form.Label>Título*</Form.Label>
+              <Form.Label>Título (Se sem cliente)*</Form.Label>
               <Form.Control type="text" value={modalData?.titulo || ''} onChange={e => setModalData(d => ({ ...d, titulo: e.target.value }))} required className="bg-dark text-white border-secondary" />
             </Form.Group>
             
-            {/* --- MUDANÇA: CAMPOS SEPARADOS DE DATA E HORA --- */}
             <Row>
               <Col xs={12} md={6}>
                  <Form.Group className="mb-3">
                     <Form.Label>Data*</Form.Label>
-                    <Form.Control 
-                        type="date" 
-                        value={modalData?.datePart || ''} 
-                        onChange={e => setModalData(d => ({ ...d, datePart: e.target.value }))} 
-                        required 
-                        className="bg-dark text-white border-secondary" 
-                    />
+                    <Form.Control type="date" value={modalData?.datePart || ''} onChange={e => setModalData(d => ({ ...d, datePart: e.target.value }))} required className="bg-dark text-white border-secondary" />
                 </Form.Group>
               </Col>
               <Col xs={12} md={6}>
                 <Form.Group className="mb-3">
-                    <Form.Label>Horário* (15:00 - 21:30)</Form.Label>
-                    <Form.Select 
-                        value={modalData?.timePart || ''} 
-                        onChange={e => setModalData(d => ({ ...d, timePart: e.target.value }))} 
-                        required 
-                        className="bg-dark text-white border-secondary"
-                    >
-                        {HORARIOS_PERMITIDOS.map(hora => (
-                            <option key={hora} value={hora}>{hora}</option>
-                        ))}
+                    <Form.Label>Horário*</Form.Label>
+                    <Form.Select value={modalData?.timePart || ''} onChange={e => setModalData(d => ({ ...d, timePart: e.target.value }))} required className="bg-dark text-white border-secondary">
+                        {HORARIOS_PERMITIDOS.map(hora => (<option key={hora} value={hora}>{hora}</option>))}
                     </Form.Select>
                 </Form.Group>
               </Col>
@@ -388,30 +406,60 @@ export default function Agenda() {
             <Row>
                 <Col xs={12} md={6}>
                     <Form.Group className="mb-3">
-                        <Form.Label>Cliente*</Form.Label>
+                        <Form.Label>Cliente (Opcional)</Form.Label>
                         <InputGroup>
                             <InputGroup.Text className="bg-secondary border-secondary text-white"><i className="bi bi-search" /></InputGroup.Text>
                             <Form.Control placeholder="Buscar..." value={clienteFiltro} onChange={e => setClienteFiltro(e.target.value)} className="bg-dark text-white border-secondary" />
                         </InputGroup>
-                        <Form.Select className="mt-2 bg-dark text-white border-secondary" value={modalData?.clienteId || ''} onChange={e => setModalData(d => ({ ...d, clienteId: e.target.value }))} required>
-                            <option value="">Selecione...</option>
-                            {clientesFiltrados.map(c => (<option key={c.id} value={c.id}>{c.nome} {c.endereco ? `- ${c.endereco}` : ''}</option>))}
+                        <Form.Select className="mt-2 bg-dark text-white border-secondary" value={modalData?.clienteId || ''} onChange={e => setModalData(d => ({ ...d, clienteId: e.target.value }))}>
+                            <option value="">-- Sem cliente --</option>
+                            {clientesFiltrados.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                         </Form.Select>
                     </Form.Group>
                 </Col>
                 <Col xs={12} md={6}>
                      <Form.Group className="mb-3">
                         <Form.Label>Agendado Por</Form.Label>
+                        <Form.Control type="text" placeholder="Responsável" value={modalData?.criadoPor || ''} onChange={e => setModalData(d => ({ ...d, criadoPor: e.target.value }))} className="bg-dark text-white border-secondary" />
+                    </Form.Group>
+                </Col>
+            </Row>
+
+            <Row>
+                {/* --- MUDANÇA: Campos de Valor e Qtd --- */}
+                <Col xs={4}>
+                    <Form.Group className="mb-3"><Form.Label>Qtd. Pessoas</Form.Label>
                         <Form.Control 
-                            type="text" 
-                            placeholder="Nome do responsável"
-                            value={modalData?.criadoPor || ''} 
-                            onChange={e => setModalData(d => ({ ...d, criadoPor: e.target.value }))} 
+                            type="number" 
+                            placeholder="0" 
+                            value={modalData?.quantidadePessoas || ''} 
+                            onChange={e => handleCalcChange('quantidadePessoas', e.target.value)} 
                             className="bg-dark text-white border-secondary" 
                         />
-                        <Form.Text className="text-white-50" style={{fontSize: '0.7rem'}}>
-                            (Padrão: Usuário Logado)
-                        </Form.Text>
+                    </Form.Group>
+                </Col>
+                <Col xs={4}>
+                    <Form.Group className="mb-3"><Form.Label>Valor/Pessoa (R$)</Form.Label>
+                        <Form.Control 
+                            type="number" 
+                            step="0.01"
+                            placeholder="0,00" 
+                            value={modalData?.valorPago || ''} 
+                            onChange={e => handleCalcChange('valorPago', e.target.value)} 
+                            className="bg-dark text-white border-secondary" 
+                        />
+                    </Form.Group>
+                </Col>
+                <Col xs={4}>
+                    <Form.Group className="mb-3"><Form.Label>Total (Est.)</Form.Label>
+                        <Form.Control 
+                            type="number" 
+                            step="0.01"
+                            placeholder="0,00" 
+                            value={modalData?.valorTotal || ''} 
+                            readOnly // Calculado auto
+                            className="bg-secondary text-white border-secondary" 
+                        />
                     </Form.Group>
                 </Col>
             </Row>
@@ -433,25 +481,10 @@ export default function Agenda() {
                 </Col>
             </Row>
 
-            <Row>
-                <Col xs={12} md={6}>
-                    <Form.Group className="mb-3"><Form.Label>Valor Pago (R$)</Form.Label>
-                        <Form.Control 
-                            type="number" 
-                            step="0.01"
-                            placeholder="0,00" 
-                            value={modalData?.valorPago || ''} 
-                            onChange={e => setModalData(d => ({ ...d, valorPago: e.target.value }))} 
-                            className="bg-dark text-white border-secondary" 
-                        />
-                    </Form.Group>
-                </Col>
-                <Col xs={12} md={6}>
-                    <Form.Group className="mb-3"><Form.Label>Descrição / Obs</Form.Label>
-                        <Form.Control type="text" placeholder="Observações do serviço" value={modalData?.descricao || ''} onChange={e => setModalData(d => ({ ...d, descricao: e.target.value }))} className="bg-dark text-white border-secondary" />
-                    </Form.Group>
-                </Col>
-            </Row>
+            <Form.Group className="mb-3"><Form.Label>Descrição / Obs</Form.Label>
+                <Form.Control type="text" placeholder="Observações do serviço" value={modalData?.descricao || ''} onChange={e => setModalData(d => ({ ...d, descricao: e.target.value }))} className="bg-dark text-white border-secondary" />
+            </Form.Group>
+
           </Modal.Body>
           <Modal.Footer className="bg-dark border-secondary">
              {modalData?.id && (<Button variant="outline-danger" onClick={() => { setShowConfirm(true); setTarefaParaExcluir(modalData.id); }} className="me-auto"><i className="bi bi-trash-fill me-1"/> Excluir</Button>)}

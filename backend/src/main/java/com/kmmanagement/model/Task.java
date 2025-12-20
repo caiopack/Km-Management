@@ -39,9 +39,17 @@ public class Task {
     @Column(name = "criado_por")
     private String criadoPor;
 
-    // --- NOVO CAMPO: Valor Pago ---
+    // Usado como valor unitário/por pessoa para o cálculo
     @Column(name = "valor_pago")
     private Double valorPago;
+
+    // Calculado: qtd * valorPago
+    @Column(name = "valor_total")
+    private Double valorTotal;
+
+    // --- NOVO CAMPO ---
+    @Column(name = "quantidade_pessoas")
+    private Integer quantidadePessoas;
 
     public Task() {}
 
@@ -72,4 +80,10 @@ public class Task {
 
     public Double getValorPago() { return valorPago; }
     public void setValorPago(Double valorPago) { this.valorPago = valorPago; }
+
+    public Double getValorTotal() { return valorTotal; }
+    public void setValorTotal(Double valorTotal) { this.valorTotal = valorTotal; }
+
+    public Integer getQuantidadePessoas() { return quantidadePessoas; }
+    public void setQuantidadePessoas(Integer quantidadePessoas) { this.quantidadePessoas = quantidadePessoas; }
 }

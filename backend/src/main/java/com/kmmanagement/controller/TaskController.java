@@ -1,19 +1,27 @@
 package com.kmmanagement.controller;
 
-import com.kmmanagement.dto.TaskDTO;
-import com.kmmanagement.model.Task;
-import com.kmmanagement.model.Cliente;
-import com.kmmanagement.repository.TaskRepository;
-import com.kmmanagement.repository.ClienteRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.kmmanagement.dto.TaskDTO;
+import com.kmmanagement.model.Cliente;
+import com.kmmanagement.model.Task;
+import com.kmmanagement.repository.ClienteRepository;
+import com.kmmanagement.repository.TaskRepository;
 
 @RestController
 @RequestMapping("/api/tarefas")
@@ -40,8 +48,9 @@ public class TaskController {
                 c != null ? c.getEndereco() : null,
                 t.getDataServico() != null ? t.getDataServico().format(DATE_TIME_FORMATTER) : null,
                 t.getCriadoPor(),
-                // Mapeia valor pago
-                t.getValorPago() 
+                t.getValorPago(),
+                t.getValorTotal(),
+                t.getQuantidadePessoas() // Novo campo
         );
     }
 
@@ -52,13 +61,16 @@ public class TaskController {
         task.setStatus(dto.getStatus());
         task.setPrioridade(dto.getPrioridade());
         task.setCriadoPor(dto.getCriadoPor());
-        
-        // Mapeia valor pago
         task.setValorPago(dto.getValorPago());
+        task.setValorTotal(dto.getValorTotal());
+        task.setQuantidadePessoas(dto.getQuantidadePessoas()); // Novo campo
 
-        if (dto.getClienteId() != null) {
+        // Cliente Opcional
+        if (dto.getClienteId() != null && dto.getClienteId() > 0) {
             Optional<Cliente> cliente = clienteRepository.findById(dto.getClienteId());
             cliente.ifPresent(task::setCliente);
+        } else {
+            task.setCliente(null);
         }
         
         if (dto.getDataServico() != null && !dto.getDataServico().isEmpty()) {
@@ -95,10 +107,10 @@ public class TaskController {
             task.setPrioridade(nova.getPrioridade());
             task.setCliente(nova.getCliente());
             task.setDataServico(nova.getDataServico());
-            
-            // Atualiza campos opcionais
-            if (nova.getCriadoPor() != null) task.setCriadoPor(nova.getCriadoPor());
+            task.setCriadoPor(nova.getCriadoPor());
             task.setValorPago(nova.getValorPago()); 
+            task.setValorTotal(nova.getValorTotal());
+            task.setQuantidadePessoas(nova.getQuantidadePessoas()); // Atualiza novo campo
 
             return ResponseEntity.ok(toDTO(repository.save(task)));
         }).orElse(ResponseEntity.notFound().build());
