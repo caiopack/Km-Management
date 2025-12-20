@@ -20,6 +20,8 @@ import ptBR from 'date-fns/locale/pt-BR';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../index.css';
+// IMPORTANDO O COMPONENTE DE DICA
+import TipToast from '../components/TipToast';
 
 const locales = { 'pt-BR': ptBR };
 const localizer = dateFnsLocalizer({
@@ -37,9 +39,9 @@ const STATUS_LIST = [
 ];
 
 const PRIORIDADE_COLORS = {
-  1: '#DC3545', // Alta
-  2: '#FFC107', // Média
-  3: '#198754'  // Baixa
+  1: '#DC3545', // Alta (Vermelho)
+  2: '#FFC107', // Média (Amarelo)
+  3: '#198754'  // Baixa (Verde)
 };
 
 const HORARIOS_PERMITIDOS = [
@@ -295,7 +297,8 @@ export default function Agenda() {
   );
 
   const eventStyleGetter = (event) => {
-    const backgroundColor = PRIORIDADE_COLORS[event.resource.prioridade] || '#0066FF';
+    // COR PADRÃO: VERMELHO
+    const backgroundColor = PRIORIDADE_COLORS[event.resource.prioridade] || '#DC3545';
     const finalColor = event.resource.status === 'FINALIZADO' ? '#495057' : backgroundColor;
 
     return {
@@ -313,6 +316,23 @@ export default function Agenda() {
     };
   };
 
+  const slotPropGetter = (date) => {
+    if (!modalData?.datePart || !modalData?.timePart) return {};
+
+    const slotIso = format(date, 'yyyy-MM-dd HH:mm');
+    const selectedIso = `${modalData.datePart} ${modalData.timePart}`;
+
+    if (slotIso === selectedIso) {
+      return {
+        style: {
+          backgroundColor: 'rgba(220, 53, 69, 0.2)', // Vermelho claro
+          border: '2px solid #DC3545', // Borda vermelha forte
+        },
+      };
+    }
+    return {};
+  };
+
   return (
     <Container fluid className="py-3 d-flex flex-column" style={{ minHeight: '100vh', padding: '20px 32px' }}>
       
@@ -321,7 +341,6 @@ export default function Agenda() {
         .rbc-event-label { display: none !important; }
         .rbc-timeslot-group { min-height: 150px !important; }
 
-        /* CUSTOMIZAÇÃO DO ÍCONE NATIVO DO CALENDÁRIO PARA VERMELHO */
         ::-webkit-calendar-picker-indicator {
             filter: invert(27%) sepia(91%) saturate(2352%) hue-rotate(339deg) brightness(93%) contrast(89%);
             cursor: pointer;
@@ -329,26 +348,30 @@ export default function Agenda() {
 
         .rbc-toolbar button { color: #fff; border: 1px solid #495057; background: transparent; }
         .rbc-toolbar button:hover { background-color: #343a40; }
-        .rbc-toolbar button.rbc-active { background-color: #0d6efd; border-color: #0d6efd; }
+        
+        /* Botões de navegação ativos (Hoje, Semana) -> VERMELHOS */
+        .rbc-toolbar button.rbc-active { background-color: #DC3545; border-color: #DC3545; }
+        
         .rbc-off-range-bg { background-color: #2c3034 !important; }
         .rbc-today { background-color: #313b4b !important; }
         .rbc-time-view, .rbc-header, .rbc-time-content, .rbc-timeslot-group { border-color: #495057; }
         .rbc-day-slot .rbc-time-slot { border-top: 1px solid #3a3f45; }
         .rbc-event { padding: 0 !important; background: transparent !important; outline: none; box-shadow: none; }
+        .rbc-day-slot.rbc-today { background-color: transparent !important; }
       `}</style>
 
       <Row className="mb-3 align-items-center g-3">
         <Col md><h2 className="text-white m-0 fw-bold">Agenda</h2></Col>
         <Col md="auto" className="d-flex align-items-center gap-2">
             <Form.Label className="text-white-50 m-0 fw-bold">
-                {/* ÍCONE DESTAQUE EM VERMELHO */}
                 <i className="bi bi-calendar-week me-1" style={{ color: '#DC3545', fontSize: '1.2rem' }}/> 
                 Ir para:
             </Form.Label>
             <Form.Control type="date" className="bg-dark text-white border-secondary" value={format(date, 'yyyy-MM-dd')} onChange={handleDateChange} style={{ width: 'auto' }} />
         </Col>
         <Col md="auto">
-          <Button variant="primary" onClick={() => openModal()}><i className="bi bi-plus-lg me-1" /> Novo</Button>
+          {/* Botão NOVO -> VERMELHO */}
+          <Button variant="danger" onClick={() => openModal()}><i className="bi bi-plus-lg me-1" /> Novo</Button>
         </Col>
       </Row>
 
@@ -365,6 +388,7 @@ export default function Agenda() {
           timeslots={1}
           min={new Date(0, 0, 0, 15, 0, 0)} 
           max={new Date(0, 0, 0, 21, 30, 0)} 
+          slotPropGetter={slotPropGetter}
           components={{ event: CustomEvent }}
           startAccessor="start"
           endAccessor="end"
@@ -497,7 +521,8 @@ export default function Agenda() {
           <Modal.Footer className="bg-dark border-secondary">
              {modalData?.id && (<Button variant="outline-danger" onClick={() => { setShowConfirm(true); setTarefaParaExcluir(modalData.id); }} className="me-auto"><i className="bi bi-trash-fill me-1"/> Excluir</Button>)}
             <Button variant="secondary" onClick={closeModal}>Cancelar</Button>
-            <Button variant="primary" type="submit">Salvar</Button>
+            {/* BOTÃO SALVAR VERDE */}
+            <Button variant="success" type="submit">Salvar</Button>
           </Modal.Footer>
         </Form>
       </Modal>
@@ -510,6 +535,9 @@ export default function Agenda() {
           <Button variant="danger" onClick={handleConfirmDelete}>Sim</Button>
         </Modal.Footer>
       </Modal>
+
+      {/* DICA RÁPIDA (COM ESTILO VERMELHO) */}
+      <TipToast message="Clique na grade para agendar ou em um evento para editar." />
     </Container>
   );
 }

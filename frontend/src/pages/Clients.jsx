@@ -127,14 +127,17 @@ export default function Clients() {
                   style={{ background: '#fff', border: '1px solid #ccc' }}
                 />
               </InputGroup>
+              
+              {/* MUDANÇA AQUI: variant="danger" para ficar VERMELHO */}
               <Button
-                variant="primary"
+                variant="danger"
                 onClick={onNew}
                 className="d-flex align-items-center"
                 style={{ height: '2.2rem', fontSize: '0.9rem' }}
               >
                 <i className="bi bi-plus-lg me-1" /> Novo
               </Button>
+
             </div>
           </div>
         </Col>

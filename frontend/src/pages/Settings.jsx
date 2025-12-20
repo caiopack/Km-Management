@@ -11,8 +11,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 
 /**
  * Configurações minimalista – Perfil + único toggle “Mostrar dicas rápidas”.
- *   • Preferência salva em localStorage, lida globalmente.
- *   • Visual dark coerente; preview toast com cabeçalho azul + botão X.
+ * • Identidade visual: Kart Mônaco (Vermelho).
  */
 export default function Settings() {
   /* ---------- extrai email / nome ---------- */
@@ -50,6 +49,14 @@ export default function Settings() {
       className="py-4"
       style={{ minHeight: '100vh', maxWidth: 760 }}
     >
+      {/* Força o estilo do Switch para Vermelho quando marcado */}
+      <style>{`
+        .form-check-input:checked {
+          background-color: #DC3545 !important;
+          border-color: #DC3545 !important;
+        }
+      `}</style>
+
       <Row className="mb-4">
         <Col>
           <h2
@@ -71,7 +78,8 @@ export default function Settings() {
                   width: 92,
                   height: 92,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#0066FF 0%,#00D1FF 100%)',
+                  /* MUDANÇA: Gradiente Vermelho para combinar */
+                  background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -87,7 +95,7 @@ export default function Settings() {
               <h4 className="fw-bold mb-1" style={{ fontSize: isMobile ? 18 : 22 }}>
                 {userName}
               </h4>
-              <span className="text-info" style={{ wordBreak: 'break-all' }}>
+              <span className="text-white-50" style={{ wordBreak: 'break-all' }}>
                 {email}
               </span>
             </Card.Body>
@@ -99,7 +107,9 @@ export default function Settings() {
           <Card className="bg-dark text-white shadow-sm border-0 rounded-4">
             <Card.Body>
               <h5 className="fw-bold mb-3">
-                <i className="bi bi-lightbulb me-2 text-primary" /> Preferência
+                {/* MUDANÇA: Cor do ícone da lâmpada para Vermelho */}
+                <i className="bi bi-lightbulb me-2" style={{ color: '#DC3545' }} /> 
+                Preferência
               </h5>
               <Form>
                 <Form.Check
@@ -108,6 +118,7 @@ export default function Settings() {
                   label="Mostrar dicas rápidas em todas as páginas"
                   checked={showTips}
                   onChange={toggleTips}
+                  /* A cor do switch ativo é controlada pelo style block acima */
                 />
                 <small className="text-secondary d-block mt-3">
                   Salvo automaticamente
@@ -130,7 +141,8 @@ export default function Settings() {
         <Toast.Header
           closeButton={false}
           className="text-white"
-          style={{ background: '#0066FF', borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingRight: 8 }}
+          /* MUDANÇA: Cabeçalho do Toast em Vermelho */
+          style={{ background: '#DC3545', borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingRight: 8 }}
         >
           <strong className="me-auto">Dicas ativas!</strong>
           <button

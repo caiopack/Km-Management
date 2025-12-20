@@ -19,7 +19,7 @@ const STATUS_LABELS = {
 const PRIORIDADE_LABELS = { 1: 'Alta', 2: 'Média', 3: 'Baixa' };
 
 // Cores atualizadas para o padrão Kart Mônaco
-const COLORS = ['#FF0000', '#FFC107', '#198754']; 
+const COLORS = ['#DC3545', '#FFC107', '#198754']; // Mudei para o vermelho padrão (#DC3545)
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -202,15 +202,17 @@ export default function Dashboard() {
             </div>
           </Col>
           <Col xs={12} md={4} className={`d-flex ${isMobile ? "justify-content-start" : "justify-content-md-end"} align-items-center mb-2 gap-2`}>
+            
+            {/* MUDANÇA AQUI: variant="danger" (Vermelho) */}
             <Button
-              variant="primary"
+              variant="danger" 
               className="fw-bold"
               size={isMobile ? "sm" : "md"}
               onClick={() => navigate('/agenda')}
-              style={{ backgroundColor: '#FF0000', borderColor: '#FF0000' }}
             >
               <i className="bi bi-kanban-fill me-2" /> Ver Agenda
             </Button>
+
             <Button
               variant="outline-light"
               className="fw-bold"
@@ -228,7 +230,7 @@ export default function Dashboard() {
             {
               icon: "calendar-event",
               color: "text-white",
-              bgIconColor: "#FF0000",
+              bgIconColor: "#DC3545", // Vermelho padrão
               label: "Pendentes Hoje",
               value: stats.pendentesHoje,
               valueColor: "#fff",
@@ -302,7 +304,7 @@ export default function Dashboard() {
             <Card className="bg-dark text-white shadow-sm h-100 rounded-4 border-0" style={{ minHeight: isMobile ? 130 : 230 }}>
               <Card.Body>
                 <div className="fw-bold mb-2" style={{ fontSize: isMobile ? 14 : 17, letterSpacing: -0.5 }}>
-                  <i className="bi bi-pie-chart me-2" style={{ color: '#FF0000' }} /> Distribuição de Tarefas por Status
+                  <i className="bi bi-pie-chart me-2" style={{ color: '#DC3545' }} /> Distribuição de Tarefas por Status
                 </div>
                 <div style={{
                   width: '100%',
@@ -341,7 +343,7 @@ export default function Dashboard() {
             <Card className="bg-dark text-white shadow-sm h-100 rounded-4 border-0" style={{ minHeight: isMobile ? 140 : 230 }}>
               <Card.Body>
                 <div className="fw-bold mb-2" style={{ fontSize: isMobile ? 14 : 17, letterSpacing: -0.5 }}>
-                  <i className="bi bi-bar-chart-steps me-2" style={{ color: '#FF0000' }} /> Tarefas por Prioridade
+                  <i className="bi bi-bar-chart-steps me-2" style={{ color: '#DC3545' }} /> Tarefas por Prioridade
                 </div>
                 <div style={{
                   width: '100%',
@@ -368,7 +370,7 @@ export default function Dashboard() {
                       />
                       <Bar dataKey="value" barSize={isMobile ? 14 : 32} radius={[0, 10, 10, 0]}>
                         {stats.porPrioridade.map((entry, index) => (
-                          <Cell key={index} fill={COLORS[0]} /> // Mantendo barras vermelhas para prioridade
+                          <Cell key={index} fill={COLORS[0]} /> // Barras vermelhas
                         ))}
                         <LabelList dataKey="value" position="right" fill="#fff" fontSize={isMobile ? 10 : 12} fontWeight={600} />
                       </Bar>
@@ -416,7 +418,7 @@ export default function Dashboard() {
                       <Badge
                         bg={t.status === 'FINALIZADO' ? 'success' : (t.status === 'EM_ANDAMENTO' ? 'warning' : 'danger')}
                         className="me-2 mb-1"
-                        style={{ minWidth: 60, fontSize: isMobile ? 9 : 12, backgroundColor: t.status === 'EM_ABERTO' ? '#FF0000' : undefined }}
+                        style={{ minWidth: 60, fontSize: isMobile ? 9 : 12, backgroundColor: t.status === 'EM_ABERTO' ? '#DC3545' : undefined }}
                       >
                         {STATUS_LABELS[t.status]}
                       </Badge>

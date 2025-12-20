@@ -30,12 +30,12 @@ export default function TipToast({ message }) {
         borderRadius: 12,
       }}
     >
-      {/* Cabeçalho azul + botão “X” usando a mesma paleta */}
+      {/* Cabeçalho agora em VERMELHO (#DC3545) */}
       <Toast.Header
         closeButton={false}
         className="text-white"
         style={{
-          background: '#0066FF',
+          background: '#DC3545', // MUDANÇA AQUI: de Azul (#0066FF) para Vermelho
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,
           paddingRight: 8,

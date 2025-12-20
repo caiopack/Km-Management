@@ -7,7 +7,6 @@ export default function Sidebar({ mobileClose }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  /* Lógica para extrair nome e iniciais do token JWT */
   const claims = (() => {
     try {
       const t = localStorage.getItem('token');
@@ -48,7 +47,6 @@ export default function Sidebar({ mobileClose }) {
 
   return (
     <div className="d-flex flex-column h-100 p-3 bg-sidebar text-white shadow">
-      {/* Container da Logo */}
       {!mobileClose && (
         <div className="text-center mb-4">
           <img 
@@ -59,26 +57,39 @@ export default function Sidebar({ mobileClose }) {
         </div>
       )}
 
-      {/* Menu de Navegação */}
-      <ul className="nav nav-pills flex-column mb-auto">
-        {links.map(([label, to, icon]) => (
-          <li key={to} className="nav-item mb-2">
-            <a
-              href={to}
-              onClick={e => navTo(e, to)}
-              className={`nav-link d-flex align-items-center transition-all ${
-                pathname === to ? 'active bg-primary' : 'text-white'
-              }`}
-              {...(mobileClose && { 'data-bs-dismiss': 'offcanvas' })}
-            >
-              <i className={`bi bi-${icon} me-2`} />
-              <span>{label}</span>
-            </a>
-          </li>
-        ))}
+      {/* MUDANÇA CRÍTICA AQUI: 
+         Troquei "nav nav-pills" por apenas "nav".
+         Isso remove o estilo padrão do Bootstrap que forçava o AZUL no active.
+      */}
+      <ul className="nav flex-column mb-auto">
+        {links.map(([label, to, icon]) => {
+          const isActive = pathname === to;
+          
+          return (
+            <li key={to} className="nav-item mb-2">
+              <a
+                href={to}
+                onClick={e => navTo(e, to)}
+                /* Removemos a classe 'active' do Bootstrap para ele não interferir na cor */
+                className="nav-link d-flex align-items-center transition-all text-white"
+                style={{
+                  /* Agora nós controlamos 100% da cor */
+                  backgroundColor: isActive ? '#DC3545' : 'transparent', 
+                  color: '#fff',
+                  cursor: 'pointer',
+                  borderRadius: '0.375rem', // Mantém a borda arredondada bonita
+                  fontWeight: isActive ? '600' : '400'
+                }}
+                {...(mobileClose && { 'data-bs-dismiss': 'offcanvas' })}
+              >
+                <i className={`bi bi-${icon} me-2`} />
+                <span>{label}</span>
+              </a>
+            </li>
+          );
+        })}
       </ul>
 
-      {/* Seção do Usuário e Logout */}
       <div className="mt-auto pt-3 border-top border-secondary">
         <div className="d-flex align-items-center mb-3">
           <div
@@ -86,7 +97,6 @@ export default function Sidebar({ mobileClose }) {
               width: 42,
               height: 42,
               borderRadius: '50%',
-              /* Gradiente alterado de Azul para Vermelho Kart Mônaco */
               background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
               display: 'flex',
               alignItems: 'center',
