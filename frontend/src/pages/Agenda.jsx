@@ -15,33 +15,35 @@ import parse from 'date-fns/parse';
 import startOfWeek from 'date-fns/startOfWeek';
 import getDay from 'date-fns/getDay';
 import addMinutes from 'date-fns/addMinutes';
+import addDays from 'date-fns/addDays';
 import differenceInMinutes from 'date-fns/differenceInMinutes';
 import ptBR from 'date-fns/locale/pt-BR';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../index.css';
-// IMPORTANDO O COMPONENTE DE DICA
 import TipToast from '../components/TipToast';
 
 const locales = { 'pt-BR': ptBR };
+
 const localizer = dateFnsLocalizer({
   format,
   parse,
-  startOfWeek,
+  startOfWeek: (date) => startOfWeek(date, { weekStartsOn: 1 }), 
   getDay,
   locales,
 });
 
 const STATUS_LIST = [
-  { value: 'EM_ABERTO', label: 'Em Aberto' },
-  { value: 'EM_ANDAMENTO', label: 'Em Andamento' },
-  { value: 'FINALIZADO', label: 'Finalizado' }
+  { value: 'A_PAGAR', label: 'A Pagar' },
+  { value: 'PAGO', label: 'Pago' }
 ];
 
-const PRIORIDADE_COLORS = {
-  1: '#DC3545', // Alta (Vermelho)
-  2: '#FFC107', // Média (Amarelo)
-  3: '#198754'  // Baixa (Verde)
+// --- CORES ATUALIZADAS ---
+// 1 = Primeira Vez (AZUL)
+// 2 = Recorrente (VERDE)
+const FREQUENCIA_COLORS = {
+  1: '#0D6EFD', // Primeira Vez -> Azul
+  2: '#198754'  // Recorrente -> Verde
 };
 
 const HORARIOS_PERMITIDOS = [
@@ -75,9 +77,15 @@ const CustomEvent = ({ event }) => {
     ? parseFloat(resource.valorPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : null;
     
-  const valorTotalFmt = resource.valorTotal 
-    ? parseFloat(resource.valorTotal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    : null;
+  // Status Pagamento
+  const isPago = resource.status === 'PAGO';
+  const statusLabel = isPago ? 'Pago' : 'A Pagar';
+  const statusColor = isPago ? '#198754' : '#DC3545'; 
+
+  // Frequência
+  const frequenciaVal = resource.prioridade || 2; 
+  const frequenciaLabel = frequenciaVal === 1 ? '1ª Vez' : 'Recorrente';
+  const frequenciaColor = FREQUENCIA_COLORS[frequenciaVal];
 
   return (
     <div className="d-flex flex-column h-100 p-1" style={{ fontSize: '0.7rem', lineHeight: '1.1', overflow: 'hidden' }}>
@@ -101,9 +109,19 @@ const CustomEvent = ({ event }) => {
             {resource.quantidadePessoas && (
                 <span className="text-warning"><i className="bi bi-people-fill me-1"/>{resource.quantidadePessoas}</span>
             )}
+            
             <div className="d-flex flex-column">
-                {valorTotalFmt && <span className="text-info fw-bold">Est: {valorTotalFmt}</span>}
-                {valorPagoFmt && <span className="text-success fw-bold">Pg: {valorPagoFmt}</span>}
+                {/* FREQUÊNCIA (AZUL ou VERDE) */}
+                <span className="fw-bold" style={{ color: frequenciaColor }}>
+                    {frequenciaLabel}
+                </span>
+                
+                {/* STATUS PAGAMENTO */}
+                {valorPagoFmt && (
+                    <span className="fw-bold" style={{ color: statusColor }}>
+                        {statusLabel}: {valorPagoFmt}
+                    </span>
+                )}
             </div>
          </div>
       </div>
@@ -142,6 +160,8 @@ export default function Agenda() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState(null);
 
+  const [horariosOpcoes, setHorariosOpcoes] = useState(HORARIOS_PERMITIDOS);
+
   useEffect(() => {
     fetchTarefas();
     fetchClientes();
@@ -175,12 +195,28 @@ export default function Agenda() {
             criadoPor: t.criadoPor || 'Admin',
             valorPago: t.valorPago,
             valorTotal: t.valorTotal,
-            quantidadePessoas: t.quantidadePessoas
+            quantidadePessoas: t.quantidadePessoas,
+            status: t.status,
+            prioridade: t.prioridade
           }
         };
       });
     setEventos(novosEventos);
   }, [tarefas, clientes]);
+
+  useEffect(() => {
+    if (modalData?.datePart) {
+        const [ano, mes, dia] = modalData.datePart.split('-').map(Number);
+        const dataObj = new Date(ano, mes - 1, dia);
+        const dayOfWeek = getDay(dataObj); 
+
+        if (dayOfWeek === 0) {
+            setHorariosOpcoes(HORARIOS_PERMITIDOS.filter(h => h <= '19:30'));
+        } else {
+            setHorariosOpcoes(HORARIOS_PERMITIDOS);
+        }
+    }
+  }, [modalData?.datePart]);
 
   async function fetchTarefas() {
     try { const r = await api.get('/tarefas'); setTarefas(r.data); } catch (e) { console.error(e); }
@@ -190,7 +226,25 @@ export default function Agenda() {
   }
 
   function handleSelectEvent(event) { openModal(event.resource); }
-  function handleSelectSlot({ start }) { openModal(null, start); }
+
+  function handleSelectSlot({ start }) { 
+      const day = getDay(start);
+      if (day === 1) { 
+          alert("O Kart está fechado nas segundas-feiras. Selecione outro dia.");
+          return;
+      }
+      if (day === 0) {
+          const hour = start.getHours();
+          const minutes = start.getMinutes();
+          const timeVal = hour * 100 + minutes;
+          if (timeVal > 1930) {
+              alert("No domingo, o Kart funciona somente até as 19:30.");
+              return;
+          }
+      }
+      openModal(null, start); 
+  }
+
   function handleDateChange(e) {
     if(e.target.value){
       const [ano, mes, dia] = e.target.value.split('-').map(Number);
@@ -224,11 +278,15 @@ export default function Agenda() {
         quantidadePessoas: tarefa.quantidadePessoas || ''
       });
     } else {
-      let initialDate = format(new Date(), 'yyyy-MM-dd');
+      let baseDate = dataPreSelecionada || new Date();
+      if (getDay(baseDate) === 1) {
+          baseDate = addDays(baseDate, 1);
+      }
+
+      let initialDate = format(baseDate, 'yyyy-MM-dd');
       let initialTime = '15:00'; 
 
       if (dataPreSelecionada) {
-        initialDate = format(dataPreSelecionada, 'yyyy-MM-dd');
         const slotTime = format(dataPreSelecionada, 'HH:mm');
         if (HORARIOS_PERMITIDOS.includes(slotTime)) {
             initialTime = slotTime;
@@ -236,7 +294,10 @@ export default function Agenda() {
       }
 
       setModalData({
-        titulo: '', descricao: '', status: 'EM_ABERTO', prioridade: 2, clienteId: '',
+        titulo: '', descricao: '', 
+        status: 'A_PAGAR',
+        prioridade: 2, 
+        clienteId: '',
         datePart: initialDate,
         timePart: initialTime,
         criadoPor: usuarioPadrao, valorPago: '', valorTotal: '', quantidadePessoas: ''
@@ -266,6 +327,19 @@ export default function Agenda() {
     setValidated(true);
     if (!modalData?.titulo || !modalData?.datePart || !modalData?.timePart) return;
     
+    const [ano, mes, dia] = modalData.datePart.split('-').map(Number);
+    const checkDate = new Date(ano, mes - 1, dia);
+    const day = getDay(checkDate);
+
+    if (day === 1) {
+        alert("Não é possível agendar nas segundas-feiras (Fechado). Por favor, mude a data.");
+        return;
+    }
+    if (day === 0 && modalData.timePart > '19:30') {
+        alert("Domingo o funcionamento é até 19:30.");
+        return;
+    }
+
     const finalDataServico = `${modalData.datePart} ${modalData.timePart}`;
 
     const payload = { 
@@ -297,9 +371,9 @@ export default function Agenda() {
   );
 
   const eventStyleGetter = (event) => {
-    // COR PADRÃO: VERMELHO
-    const backgroundColor = PRIORIDADE_COLORS[event.resource.prioridade] || '#DC3545';
-    const finalColor = event.resource.status === 'FINALIZADO' ? '#495057' : backgroundColor;
+    const backgroundColor = FREQUENCIA_COLORS[event.resource.prioridade] || '#DC3545';
+    // Se estiver pago, fica cinza
+    const finalColor = event.resource.status === 'PAGO' ? '#495057' : backgroundColor;
 
     return {
       style: {
@@ -317,6 +391,23 @@ export default function Agenda() {
   };
 
   const slotPropGetter = (date) => {
+    const day = getDay(date);
+    const hour = date.getHours();
+    const minutes = date.getMinutes();
+    const timeVal = hour * 100 + minutes;
+
+    const isMonday = day === 1;
+    const isSundayClosed = day === 0 && timeVal > 1930;
+
+    if (isMonday || isSundayClosed) { 
+        return {
+            style: {
+                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px)',
+                cursor: 'not-allowed',
+            }
+        };
+    }
+
     if (!modalData?.datePart || !modalData?.timePart) return {};
 
     const slotIso = format(date, 'yyyy-MM-dd HH:mm');
@@ -325,8 +416,8 @@ export default function Agenda() {
     if (slotIso === selectedIso) {
       return {
         style: {
-          backgroundColor: 'rgba(220, 53, 69, 0.2)', // Vermelho claro
-          border: '2px solid #DC3545', // Borda vermelha forte
+          backgroundColor: 'rgba(220, 53, 69, 0.2)', 
+          border: '2px solid #DC3545', 
         },
       };
     }
@@ -348,16 +439,15 @@ export default function Agenda() {
 
         .rbc-toolbar button { color: #fff; border: 1px solid #495057; background: transparent; }
         .rbc-toolbar button:hover { background-color: #343a40; }
-        
-        /* Botões de navegação ativos (Hoje, Semana) -> VERMELHOS */
         .rbc-toolbar button.rbc-active { background-color: #DC3545; border-color: #DC3545; }
         
         .rbc-off-range-bg { background-color: #2c3034 !important; }
-        .rbc-today { background-color: #313b4b !important; }
+        .rbc-today { background-color: transparent !important; } 
+        .rbc-header.rbc-today { background-color: #313b4b !important; }
+
         .rbc-time-view, .rbc-header, .rbc-time-content, .rbc-timeslot-group { border-color: #495057; }
         .rbc-day-slot .rbc-time-slot { border-top: 1px solid #3a3f45; }
         .rbc-event { padding: 0 !important; background: transparent !important; outline: none; box-shadow: none; }
-        .rbc-day-slot.rbc-today { background-color: transparent !important; }
       `}</style>
 
       <Row className="mb-3 align-items-center g-3">
@@ -370,7 +460,6 @@ export default function Agenda() {
             <Form.Control type="date" className="bg-dark text-white border-secondary" value={format(date, 'yyyy-MM-dd')} onChange={handleDateChange} style={{ width: 'auto' }} />
         </Col>
         <Col md="auto">
-          {/* Botão NOVO -> VERMELHO */}
           <Button variant="danger" onClick={() => openModal()}><i className="bi bi-plus-lg me-1" /> Novo</Button>
         </Col>
       </Row>
@@ -422,7 +511,7 @@ export default function Agenda() {
                 <Form.Group className="mb-3">
                     <Form.Label>Horário*</Form.Label>
                     <Form.Select value={modalData?.timePart || ''} onChange={e => setModalData(d => ({ ...d, timePart: e.target.value }))} required className="bg-dark text-white border-secondary">
-                        {HORARIOS_PERMITIDOS.map(hora => (<option key={hora} value={hora}>{hora}</option>))}
+                        {horariosOpcoes.map(hora => (<option key={hora} value={hora}>{hora}</option>))}
                     </Form.Select>
                 </Form.Group>
               </Col>
@@ -499,15 +588,16 @@ export default function Agenda() {
             <Row>
                 <Col xs={12} md={6}>
                     <Form.Group className="mb-3"><Form.Label>Status</Form.Label>
-                        <Form.Select value={modalData?.status || 'EM_ABERTO'} onChange={e => setModalData(d => ({ ...d, status: e.target.value }))} className="bg-dark text-white border-secondary">
+                        <Form.Select value={modalData?.status || 'A_PAGAR'} onChange={e => setModalData(d => ({ ...d, status: e.target.value }))} className="bg-dark text-white border-secondary">
                             {STATUS_LIST.map(s => (<option key={s.value} value={s.value}>{s.label}</option>))}
                         </Form.Select>
                     </Form.Group>
                 </Col>
                 <Col xs={12} md={6}>
-                    <Form.Group className="mb-3"><Form.Label>Prioridade</Form.Label>
+                    <Form.Group className="mb-3"><Form.Label>Frequência</Form.Label>
                         <Form.Select value={modalData?.prioridade || 2} onChange={e => setModalData(d => ({ ...d, prioridade: parseInt(e.target.value) }))} className="bg-dark text-white border-secondary">
-                            <option value={1}>Alta</option><option value={2}>Média</option><option value={3}>Baixa</option>
+                            <option value={1}>Primeira Vez</option>
+                            <option value={2}>Recorrente</option>
                         </Form.Select>
                     </Form.Group>
                 </Col>
@@ -521,7 +611,6 @@ export default function Agenda() {
           <Modal.Footer className="bg-dark border-secondary">
              {modalData?.id && (<Button variant="outline-danger" onClick={() => { setShowConfirm(true); setTarefaParaExcluir(modalData.id); }} className="me-auto"><i className="bi bi-trash-fill me-1"/> Excluir</Button>)}
             <Button variant="secondary" onClick={closeModal}>Cancelar</Button>
-            {/* BOTÃO SALVAR VERDE */}
             <Button variant="success" type="submit">Salvar</Button>
           </Modal.Footer>
         </Form>
@@ -536,7 +625,6 @@ export default function Agenda() {
         </Modal.Footer>
       </Modal>
 
-      {/* DICA RÁPIDA (COM ESTILO VERMELHO) */}
       <TipToast message="Clique na grade para agendar ou em um evento para editar." />
     </Container>
   );
