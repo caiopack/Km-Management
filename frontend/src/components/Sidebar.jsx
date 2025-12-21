@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import logoImg from '../assets/kartLogo.png';
@@ -6,7 +6,24 @@ import logoImg from '../assets/kartLogo.png';
 export default function Sidebar({ mobileClose }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const [isAdmin, setIsAdmin] = useState(false);
 
+  // Lógica para verificar se é ADMIN ao carregar
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.role === 'ADMIN') {
+          setIsAdmin(true);
+        }
+      } catch (e) {
+        console.error("Erro ao ler perfil do usuário");
+      }
+    }
+  }, []);
+
+  // Lógica de decodificar token apenas para exibir Nome/Iniciais (Mantida do seu código)
   const claims = (() => {
     try {
       const t = localStorage.getItem('token');
@@ -26,11 +43,16 @@ export default function Sidebar({ mobileClose }) {
     .slice(0, 2)
     .toUpperCase();
 
+  // Definição dos Links
   const links = [
     ['Dashboard', '/home', 'bar-chart-line'],
     ['Agenda', '/agenda', 'calendar-event'],
     ['Clientes', '/clientes', 'people'],
     ['Orçamentos', '/orcamentos', 'file-earmark-text'],
+    
+    // Injeta o link de Usuários se for ADMIN
+    ...(isAdmin ? [['Usuários', '/usuarios', 'shield-lock-fill']] : []),
+    
     ['Configurações', '/settings', 'gear'],
   ];
 
@@ -42,6 +64,7 @@ export default function Sidebar({ mobileClose }) {
   const logout = e => {
     e.preventDefault();
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login', { replace: true });
   };
 
@@ -57,10 +80,6 @@ export default function Sidebar({ mobileClose }) {
         </div>
       )}
 
-      {/* MUDANÇA CRÍTICA AQUI: 
-         Troquei "nav nav-pills" por apenas "nav".
-         Isso remove o estilo padrão do Bootstrap que forçava o AZUL no active.
-      */}
       <ul className="nav flex-column mb-auto">
         {links.map(([label, to, icon]) => {
           const isActive = pathname === to;
@@ -70,14 +89,12 @@ export default function Sidebar({ mobileClose }) {
               <a
                 href={to}
                 onClick={e => navTo(e, to)}
-                /* Removemos a classe 'active' do Bootstrap para ele não interferir na cor */
                 className="nav-link d-flex align-items-center transition-all text-white"
                 style={{
-                  /* Agora nós controlamos 100% da cor */
-                  backgroundColor: isActive ? '#DC3545' : 'transparent', 
+                  backgroundColor: isActive ? '#DC3545' : 'transparent', // Seu vermelho
                   color: '#fff',
                   cursor: 'pointer',
-                  borderRadius: '0.375rem', // Mantém a borda arredondada bonita
+                  borderRadius: '0.375rem',
                   fontWeight: isActive ? '600' : '400'
                 }}
                 {...(mobileClose && { 'data-bs-dismiss': 'offcanvas' })}
