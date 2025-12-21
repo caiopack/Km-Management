@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api'; // MUDANÇA: Usa api configurada
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-// Importação da logo do Kart Mônaco
 import logoImg from '../assets/kartLogo.png'; 
 
 export default function Register() {
@@ -28,20 +27,28 @@ export default function Register() {
     e.preventDefault();
     setError('');
     try {
-      // Ajustado para bater exatamente com o RegisterRequestDTO do Backend
-      await axios.post('/auth/register', { 
+      // MUDANÇA: Envia 'token' em vez de 'secretKey'
+      const { data } = await api.post('/auth/register', { 
         name: name, 
         email: email, 
         password: password, 
-        secretKey: registrationKey // O Backend espera 'secretKey'
+        token: registrationKey 
       });
-      navigate('/login');
+      
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify({ 
+          nome: data.name, 
+          role: data.role, 
+          id: data.id 
+      }));
+
+      navigate('/home');
     } catch (err) {
-      // Captura a mensagem de erro específica (ex: "Chave secreta inválida")
       setError(err.response?.data || 'Erro ao realizar cadastro');
     }
   };
 
+  // --- (ABAIXO ESTÁ EXATAMENTE O SEU ESTILO ORIGINAL) ---
   const containerStyle = {
     display: 'flex',
     flexDirection: isMobile ? 'column-reverse' : 'row',
@@ -100,7 +107,6 @@ export default function Register() {
 
   return (
     <div style={containerStyle}>
-      {/* Lado Esquerdo: Formulário */}
       <div style={formStyle}>
         <div style={{ width: '100%', maxWidth: 450 }}>
           <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 700, color: '#FFF', textAlign: 'center', marginBottom: '0.5rem' }}>
@@ -162,7 +168,7 @@ export default function Register() {
               <i className="bi bi-key-fill" style={iconStyle('key')} />
               <input
                 type="text"
-                placeholder="Chave de registro"
+                placeholder="Token de Acesso (Ex: KART2025)"
                 value={registrationKey}
                 onChange={e => setRegistrationKey(e.target.value)}
                 style={inputStyle}
@@ -200,7 +206,6 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Lado Direito: Logo */}
       <div style={headerStyle}>
         <img 
           src={logoImg} 

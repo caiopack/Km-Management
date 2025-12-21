@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api'; // MUDANÇA: Usa api configurada
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-// Importação da nova logo
 import logoImg from '../assets/kartLogo.png'; 
 
 export default function Login() {
@@ -14,7 +13,6 @@ export default function Login() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
 
-  // Definição do Vermelho Vivo
   const primaryRed = '#FF0000'; 
 
   useEffect(() => {
@@ -26,15 +24,24 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
     try {
-      // Endpoint de login
-      const { data } = await axios.post('/auth/login', { email, password });
+      // MUDANÇA: Usa api.post e endpoint correto
+      const { data } = await api.post('/auth/login', { email, password });
+      
       localStorage.setItem('token', data.token);
+      // MUDANÇA: Salva dados completos do usuário
+      localStorage.setItem('user', JSON.stringify({
+          nome: data.name,
+          role: data.role,
+          id: data.id
+      }));
+
       navigate('/home');
     } catch {
       setError('Email ou senha inválidos');
     }
   };
 
+  // --- (ABAIXO ESTÁ EXATAMENTE O SEU ESTILO ORIGINAL) ---
   const containerStyle = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
@@ -92,21 +99,18 @@ export default function Login() {
 
   return (
     <div style={containerStyle}>
-      {/* Seção da Esquerda: Apenas a Logo em destaque */}
       <div style={headerStyle}>
         <img 
           src={logoImg} 
           alt="Logo Kart Mônaco" 
           style={{ 
-            width: isMobile ? '250px' : '450px', // Logo bem grande como solicitado
+            width: isMobile ? '250px' : '450px',
             height: 'auto',
             filter: 'drop-shadow(0px 10px 10px rgba(0, 0, 0, 0.3))' 
           }} 
         />
-        {/* Subtítulo removido conforme solicitado */}
       </div>
 
-      {/* Lado Direito: Formulário de Login */}
       <div style={formStyle}>
         <div style={{ width: '100%', maxWidth: 450 }}>
           <h2 style={{ fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 700, color: '#FFF', textAlign: 'center', marginBottom: '0.5rem' }}>
