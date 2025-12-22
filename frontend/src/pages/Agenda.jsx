@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import api from '../services/api';
 import {
   Button,
@@ -7,7 +7,8 @@ import {
   Row,
   Col,
   Container,
-  InputGroup
+  InputGroup,
+  Spinner
 } from 'react-bootstrap';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
@@ -22,6 +23,10 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import '../index.css';
 import TipToast from '../components/TipToast';
+
+// Bibliotecas para PDF
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const locales = { 'pt-BR': ptBR };
 
@@ -38,9 +43,6 @@ const STATUS_LIST = [
   { value: 'PAGO', label: 'Pago' }
 ];
 
-// --- CORES ATUALIZADAS ---
-// 1 = Primeira Vez (AZUL)
-// 2 = Recorrente (VERDE)
 const FREQUENCIA_COLORS = {
   1: '#0D6EFD', // Primeira Vez -> Azul
   2: '#198754'  // Recorrente -> Verde
@@ -77,12 +79,10 @@ const CustomEvent = ({ event }) => {
     ? parseFloat(resource.valorPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : null;
     
-  // Status Pagamento
   const isPago = resource.status === 'PAGO';
   const statusLabel = isPago ? 'Pago' : 'A Pagar';
   const statusColor = isPago ? '#198754' : '#DC3545'; 
 
-  // Frequência
   const frequenciaVal = resource.prioridade || 2; 
   const frequenciaLabel = frequenciaVal === 1 ? '1ª Vez' : 'Recorrente';
   const frequenciaColor = FREQUENCIA_COLORS[frequenciaVal];
@@ -111,12 +111,10 @@ const CustomEvent = ({ event }) => {
             )}
             
             <div className="d-flex flex-column">
-                {/* FREQUÊNCIA (AZUL ou VERDE) */}
                 <span className="fw-bold" style={{ color: frequenciaColor }}>
                     {frequenciaLabel}
                 </span>
                 
-                {/* STATUS PAGAMENTO */}
                 {valorPagoFmt && (
                     <span className="fw-bold" style={{ color: statusColor }}>
                         {statusLabel}: {valorPagoFmt}
@@ -146,6 +144,8 @@ const CustomEvent = ({ event }) => {
 };
 
 export default function Agenda() {
+  const calendarRef = useRef(null);
+
   const [tarefas, setTarefas] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -159,6 +159,7 @@ export default function Agenda() {
   const [clienteFiltro, setClienteFiltro] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [horariosOpcoes, setHorariosOpcoes] = useState(HORARIOS_PERMITIDOS);
 
@@ -224,6 +225,69 @@ export default function Agenda() {
   async function fetchClientes() {
     try { const r = await api.get('/clientes'); setClientes(r.data); } catch (e) { console.error(e); }
   }
+
+  // --- EXPORTAR PDF VISUAL (BLINDADO CONTRA CORTES) ---
+  const exportToPDF = async () => {
+    if (!calendarRef.current) return;
+    setIsExporting(true);
+
+    const originalHeight = calendarRef.current.style.height;
+    const originalOverflow = calendarRef.current.style.overflow;
+    const originalWindowScroll = window.scrollY; // Salva a posição do scroll do usuário
+
+    try {
+      // 1. Rola a página inteira para o topo (Corrige corte superior)
+      window.scrollTo(0, 0);
+
+      // 2. Expande o calendário para um tamanho GIGANTE (Corrige corte inferior)
+      // 2500px é mais que suficiente para desenhar de 15h até 21:30h com folga.
+      calendarRef.current.style.height = '2500px'; 
+      calendarRef.current.style.overflow = 'visible';
+
+      // 3. Garante que qualquer scroll interno do componente também esteja zerado
+      const internalScroll = calendarRef.current.querySelector('.rbc-time-content');
+      if (internalScroll) internalScroll.scrollTop = 0;
+
+      // Aguarda um tempo para o navegador renderizar o layout novo
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // 4. Captura
+      // height: calendarRef.current.scrollHeight -> Garante que pega TUDO que foi renderizado
+      // scrollY: 0 -> Força o eixo Y do print a começar do topo
+      const canvas = await html2canvas(calendarRef.current, {
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: '#212529',
+        scrollY: 0, 
+        x: 0,
+        height: calendarRef.current.scrollHeight, // Pega a altura total expandida
+        windowHeight: calendarRef.current.scrollHeight,
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      // 5. Gera PDF no tamanho exato da imagem capturada
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'l' : 'p',
+        unit: 'px',
+        format: [canvas.width, canvas.height] 
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`agenda_${format(date, 'yyyy-MM-dd')}.pdf`);
+
+    } catch (error) {
+      console.error("Erro ao gerar PDF", error);
+      alert("Erro ao gerar PDF");
+    } finally {
+      // 6. Restaura tudo como estava
+      calendarRef.current.style.height = originalHeight;
+      calendarRef.current.style.overflow = originalOverflow;
+      window.scrollTo(0, originalWindowScroll); // Devolve o usuário pro lugar dele
+      setIsExporting(false);
+    }
+  };
 
   function handleSelectEvent(event) { openModal(event.resource); }
 
@@ -459,16 +523,25 @@ export default function Agenda() {
             </Form.Label>
             <Form.Control type="date" className="bg-dark text-white border-secondary" value={format(date, 'yyyy-MM-dd')} onChange={handleDateChange} style={{ width: 'auto' }} />
         </Col>
-        <Col md="auto">
+        <Col md="auto" className="d-flex gap-2">
+          {/* BOTÃO EXPORTAR PDF VISUAL (Tamanho Real) */}
+          <Button variant="outline-light" onClick={exportToPDF} disabled={isExporting}>
+            {isExporting ? <Spinner size="sm" animation="border" /> : <i className="bi bi-file-earmark-pdf-fill me-1" />}
+            PDF
+          </Button>
           <Button variant="danger" onClick={() => openModal()}><i className="bi bi-plus-lg me-1" /> Novo</Button>
         </Col>
       </Row>
 
-      <div style={{ height: 'calc(100vh - 140px)', background: '#212529', padding: 15, borderRadius: 12, overflowY: 'hidden' }}>
+      {/* DIV DO CALENDÁRIO COM REF */}
+      <div 
+        ref={calendarRef} 
+        style={{ height: 'calc(100vh - 140px)', background: '#212529', padding: 15, borderRadius: 12, overflowY: 'hidden' }}
+      >
         <Calendar
           localizer={localizer}
           events={eventos}
-          views={['week']}
+          views={['week', 'month', 'day']} 
           view={view}
           onView={setView}
           date={date}
@@ -483,7 +556,7 @@ export default function Agenda() {
           endAccessor="end"
           style={{ height: '100%' }}
           culture='pt-BR'
-          messages={{ next: ">", previous: "<", today: "Hoje", week: "Semana", date: "Data", time: "Hora", event: "Serviço" }}
+          messages={{ next: ">", previous: "<", today: "Hoje", week: "Semana", date: "Data", time: "Hora", event: "Serviço", month: "Mês", day: "Dia" }}
           onSelectEvent={handleSelectEvent}
           onSelectSlot={handleSelectSlot}
           selectable

@@ -13,6 +13,7 @@
     "bootstrap-icons": "^1.13.1",
     "date-fns": "^4.1.0",
     "dependencies": "^0.0.1",
+    "html2canvas": "^1.4.1",
     "http-proxy-middleware": "^3.0.5",
     "jspdf": "^3.0.1",
     "react": "^19.1.0",
