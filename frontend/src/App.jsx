@@ -6,9 +6,8 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import Agenda from './pages/Agenda';
 import Clients from './pages/Clients';
-import Orcamentos from './pages/Orcamentos';
 import Settings from './pages/Settings';
-import Users from './pages/Users'; // <--- Importe aqui
+import Users from './pages/Users'; 
 import PrivateRoute from './components/PrivateRoute';
 import PublicRoute from './components/PublicRoute';
 import AppLayout from './layouts/AppLayout';
@@ -24,10 +23,9 @@ export default function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/clientes" element={<Clients />} />
-          <Route path="/orcamentos" element={<Orcamentos />} />
           <Route path="/settings" element={<Settings />} />
           
-          {/* Nova Rota */}
+          {/* Rota de Admin */}
           <Route path="/usuarios" element={<Users />} />
         </Route>
 

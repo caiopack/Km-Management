@@ -23,7 +23,7 @@ export default function Sidebar({ mobileClose }) {
     }
   }, []);
 
-  // Lógica de decodificar token apenas para exibir Nome/Iniciais (Mantida do seu código)
+  // Lógica de decodificar token apenas para exibir Nome/Iniciais
   const claims = (() => {
     try {
       const t = localStorage.getItem('token');
@@ -43,12 +43,11 @@ export default function Sidebar({ mobileClose }) {
     .slice(0, 2)
     .toUpperCase();
 
-  // Definição dos Links
+  // Definição dos Links (Sem Orçamentos)
   const links = [
     ['Dashboard', '/home', 'bar-chart-line'],
     ['Agenda', '/agenda', 'calendar-event'],
     ['Clientes', '/clientes', 'people'],
-    ['Orçamentos', '/orcamentos', 'file-earmark-text'],
     
     // Injeta o link de Usuários se for ADMIN
     ...(isAdmin ? [['Usuários', '/usuarios', 'shield-lock-fill']] : []),
