@@ -13,9 +13,19 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.kmmanagement.dto.DashboardStatsDTO;
 import com.kmmanagement.dto.TaskDTO;
@@ -42,13 +52,11 @@ public class TaskController {
             @RequestParam(defaultValue = "month") String period,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        // Se a data vier na requisição, usa ela. Se não, usa HOJE.
         LocalDate anchorDate = (date != null) ? date : LocalDate.now();
         
         LocalDateTime start;
         LocalDateTime end;
 
-        // 1. DEFINIÇÃO DE DATAS
         if ("day".equalsIgnoreCase(period)) {
             start = LocalDateTime.of(anchorDate, LocalTime.MIN);
             end = LocalDateTime.of(anchorDate, LocalTime.MAX);
@@ -60,15 +68,13 @@ public class TaskController {
             end = LocalDateTime.of(anchorDate.with(TemporalAdjusters.lastDayOfMonth()), LocalTime.MAX);
         }
 
+        // MANTIDO O FILTRO ORIGINAL: Só mostra tarefas que têm cliente
         List<Task> tarefasPeriodo = repository.findByDataServicoBetween(start, end).stream()
                 .filter(t -> t.getCliente() != null)
                 .collect(Collectors.toList());
 
         long totalAgendamentos = tarefasPeriodo.size();
 
-        // 2. CÁLCULOS FINANCEIROS (CORRIGIDO)
-        
-        // A. Total Esperado: Soma de todos os 'valorTotal'
         BigDecimal valorEsperado = tarefasPeriodo.stream()
                 .map(t -> {
                     Double val = t.getValorTotal();
@@ -76,21 +82,16 @@ public class TaskController {
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        // B. Já Pago (Recebido)
         BigDecimal valorRecebido = tarefasPeriodo.stream()
                 .map(t -> {
                     if ("PAGO".equalsIgnoreCase(t.getStatus())) {
-                        // Se PAGO: Considera apenas o que foi pago (valorPago)
-                        // Ex: Total 100, Pagou 20 -> Conta 20 aqui.
                         Double val = t.getValorPago();
                         return val != null ? BigDecimal.valueOf(val) : BigDecimal.ZERO;
                     } 
-                    // Se A_PAGAR: Nada foi pago -> 0
                     return BigDecimal.ZERO;
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // C. Falta Pagar
         BigDecimal valorAPagar = tarefasPeriodo.stream()
                 .map(t -> {
                      Double totalObj = t.getValorTotal();
@@ -99,19 +100,14 @@ public class TaskController {
                      double pago = pagoObj != null ? pagoObj : 0.0;
 
                      if ("PAGO".equalsIgnoreCase(t.getStatus())) {
-                        // Se PAGO: Falta a diferença (Total - Pago)
-                        // Ex: 100 - 20 = 80
                         return BigDecimal.valueOf(Math.max(0, total - pago));
                      } else if ("A_PAGAR".equalsIgnoreCase(t.getStatus())) {
-                        // Se A_PAGAR: Falta tudo (Total)
-                        // Ex: 100 - 0 = 100
                         return BigDecimal.valueOf(total);
                      }
                      return BigDecimal.ZERO;
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 3. FREQUÊNCIA
         long clientesNovos = tarefasPeriodo.stream()
                 .filter(t -> t.getPrioridade() != null && t.getPrioridade() == 1)
                 .count();
@@ -130,7 +126,6 @@ public class TaskController {
         ));
     }
 
-    // --- MÉTODOS CRUD (Mantidos) ---
     private String getUsuarioLogado() {
         try {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -194,6 +189,15 @@ public class TaskController {
 
     @PostMapping
     public TaskDTO criar(@RequestBody TaskDTO dto) {
+        if (dto.getDataServico() != null && !dto.getDataServico().isEmpty()) {
+            String cleanDate = dto.getDataServico().replace("T", " ");
+            LocalDateTime novaData = LocalDateTime.parse(cleanDate, DATE_TIME_FORMATTER);
+            
+            if (repository.existsByDataServico(novaData)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Já existe um agendamento para este horário.");
+            }
+        }
+
         Task novaTarefa = toEntity(dto);
         novaTarefa.setCriadoPor(getUsuarioLogado());
         return toDTO(repository.save(novaTarefa));
@@ -202,6 +206,15 @@ public class TaskController {
     @PutMapping("/{id}")
     public ResponseEntity<TaskDTO> atualizar(@PathVariable Long id, @RequestBody TaskDTO dados) {
         return repository.findById(id).map(task -> {
+            if (dados.getDataServico() != null && !dados.getDataServico().isEmpty()) {
+                String cleanDate = dados.getDataServico().replace("T", " ");
+                LocalDateTime novaData = LocalDateTime.parse(cleanDate, DATE_TIME_FORMATTER);
+
+                if (repository.existsByDataServicoAndIdNot(novaData, id)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Horário indisponível. Já existe outro agendamento.");
+                }
+            }
+
             Task nova = toEntity(dados);
             task.setTitulo(nova.getTitulo());
             task.setDescricao(nova.getDescricao());

@@ -1,3 +1,5 @@
+// backend/src/main/java/com/kmmanagement/repository/TaskRepository.java
+
 package com.kmmanagement.repository;
 
 import java.time.LocalDateTime;
@@ -19,4 +21,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findTasksForDashboard(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
     
     List<Task> findByClienteId(Long clienteId);
+
+    // --- NOVOS MÉTODOS ---
+    boolean existsByDataServico(LocalDateTime dataServico);
+    boolean existsByDataServicoAndIdNot(LocalDateTime dataServico, Long id);
 }

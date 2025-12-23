@@ -25,7 +25,15 @@ export default function Dashboard() {
   });
 
   const [period, setPeriod] = useState('month');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+
+  // CORREÇÃO APLICADA: Ajuste para pegar a data local (evita bug do fuso horário UTC)
+  // Antes era: new Date().toISOString().slice(0, 10)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    // Subtrai o offset do fuso horário para garantir a data correta no Brasil
+    const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
+    return localDate.toISOString().slice(0, 10);
+  });
   
   const [graficoPagamentos, setGraficoPagamentos] = useState([]);
   const [graficoFrequencia, setGraficoFrequencia] = useState([]);
